@@ -1,0 +1,179 @@
+version: '3.8'
+
+# Local dev (npm run start:dev -- <app>) talks to everything via localhost,
+# using the values in your .env file as-is. Inside this compose network,
+# services must address each other by *service name* instead — so each
+# app service below overrides only the host-dependent vars (Mongo URIs,
+# *_SERVICE_URL, RABBITMQ_URL) via `environment:`, while still loading
+# shared secrets (JWT_SECRET, OTP_HASH_SECRET, provider credentials, etc.)
+# from .env via `env_file`.
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: backend_mongo
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: backend_rabbitmq
+    restart: unless-stopped
+    ports:
+      - '5672:5672'   # AMQP
+      - '15672:15672' # management UI (guest/guest)
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: auth-service
+    container_name: backend_auth_service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      AUTH_MONGO_URI: mongodb://mongodb:27017/auth_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+    ports:
+      - '3001:3001'
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: user-service
+    container_name: backend_user_service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      USER_MONGO_URI: mongodb://mongodb:27017/user_db
+    ports:
+      - '3002:3002'
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: payment-service
+    container_name: backend_payment_service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PAYMENT_MONGO_URI: mongodb://mongodb:27017/payment_db
+    ports:
+      - '3004:3004'
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: notification-service
+    container_name: backend_notification_service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NOTIFICATION_MONGO_URI: mongodb://mongodb:27017/notification_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  epidiet-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: epidiet-service
+    container_name: backend_epidiet_service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      EPIDIET_MONGO_URI: mongodb://mongodb:27017/epidiet_db
+      USER_SERVICE_URL: http://user-service:3002
+    ports:
+      - '3005:3005'
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+
+  ecom-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: ecom-service
+    container_name: backend_ecom_service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      ECOM_MONGO_URI: mongodb://mongodb:27017/ecom_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+    ports:
+      - '3006:3006'
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: api-gateway
+    container_name: backend_api_gateway
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:3001
+      USER_SERVICE_URL: http://user-service:3002
+      PAYMENT_SERVICE_URL: http://payment-service:3004
+      EPIDIET_SERVICE_URL: http://epidiet-service:3005
+      ECOM_SERVICE_URL: http://ecom-service:3006
+    ports:
+      - '3000:3000'
+    depends_on:
+      - auth-service
+      - user-service
+      - payment-service
+      - epidiet-service
+      - ecom-service
+
+volumes:
+  mongo_data:
+  rabbitmq_data:
