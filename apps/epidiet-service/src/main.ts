@@ -27,6 +27,8 @@ async function bootstrap() {
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, swaggerDocument);
 
+  app.setGlobalPrefix('epidiet');
+
   const port = configService.get<number>('EPIDIET_SERVICE_PORT', 3005);
   await app.listen(port);
   console.log(`epidiet-service listening on port ${port}`);

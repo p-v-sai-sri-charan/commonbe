@@ -29,6 +29,8 @@ async function bootstrap() {
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, swaggerDocument);
 
+  app.setGlobalPrefix('ecom');
+
   const rabbitmqUrl = configService.get<string>('RABBITMQ_URL', 'amqp://guest:guest@localhost:5672');
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
