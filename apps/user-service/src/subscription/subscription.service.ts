@@ -225,7 +225,7 @@ export class SubscriptionService {
     return { success: true, linkedWith: invite.fromUserId };
   }
 
-  private buildFreeTierView(authUserId: string): Partial<UserSubscription> {
+  private buildFreeTierView(authUserId: string): UserSubscription {
     const farFuture = new Date('2124-01-01');
     return {
       authUserId,
@@ -237,6 +237,6 @@ export class SubscriptionService {
       endDate: farFuture,
       isTrialPeriod: false,
       apps: ['epidiet'],
-    } as Partial<UserSubscription>;
+    } as UserSubscription;
   }
 }
