@@ -1,12 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SmsProvider, SmsProviderId } from './sms-provider.interface';
+import twilio from 'twilio';
 
 /**
- * Placeholder Twilio integration.
- * Real implementation: use the `twilio` SDK, e.g.
- *   const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
- *   await client.messages.create({ to: mobileNumber, from: TWILIO_FROM_NUMBER, body: `Your OTP is ${otp}` });
+ * Twilio integration for sending OTP messages.
  */
 @Injectable()
 export class TwilioSmsProvider implements SmsProvider {
@@ -17,10 +15,21 @@ export class TwilioSmsProvider implements SmsProvider {
 
   async send(mobileNumber: string, otp: string): Promise<void> {
     const accountSid = this.configService.get<string>('TWILIO_ACCOUNT_SID');
+    const authToken = this.configService.get<string>('TWILIO_AUTH_TOKEN');
     const fromNumber = this.configService.get<string>('TWILIO_FROM_NUMBER');
-    // TODO: replace with a real call to the Twilio SDK once credentials are available.
-    this.logger.log(
-      `[twilio placeholder] would send OTP ${otp} to ${mobileNumber} from=${fromNumber ?? 'unset'} sid=${accountSid ? '***' : 'unset'}`,
-    );
+
+    if (!accountSid || !authToken || !fromNumber) {
+      throw new Error('TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM_NUMBER must be set');
+    }
+
+    const client = twilio(accountSid, authToken);
+    await client.messages.create({
+      to: mobileNumber,
+      from: fromNumber,
+      body: `Your OTP is ${otp}`,
+    });
+
+    this.logger.log(`Sent OTP to ${mobileNumber} via Twilio ${otp}`);
   }
 }
+
