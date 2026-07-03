@@ -29,6 +29,8 @@ async function bootstrap() {
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, swaggerDocument);
 
+  app.setGlobalPrefix('temptatto');
+
   const port = configService.get<number>('TEMPTATTO_SERVICE_PORT', 3007);
   await app.listen(port);
   console.log(`temptatto-service listening on port ${port}`);
