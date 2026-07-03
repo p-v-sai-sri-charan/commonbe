@@ -5,20 +5,23 @@ import { ApiExcludeController } from '@nestjs/swagger';
 import { AxiosError, Method } from 'axios';
 import { firstValueFrom } from 'rxjs';
 import { Response } from 'express';
-import { AuthenticatedRequest, JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AuthenticatedRequest } from '../auth/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 
 /**
  * Wildcard proxy for all /temptatto/* routes. temptatto-service owns categories,
  * products, designs, marketplace, store, cart, orders, admin, and uploads —
  * mirroring each route here would be fragile. Forward method/path/body as-is and
- * attach x-user-id from the validated JWT.
+ * attach x-user-id from the validated JWT when one is present.
  *
- * Public routes (marketplace browse, product/category listing) still pass through
- * here so the gateway can attach the user id when present.
+ * Auth is optional at the gateway: many routes (marketplace browse, product/category
+ * listing, viewing a published design) are meant to work logged-out. Routes that
+ * actually require a user reject the request on the temptatto-service side
+ * (missing x-user-id), which is where that enforcement belongs.
  */
 @ApiExcludeController()
 @Controller('temptatto')
-@UseGuards(JwtAuthGuard)
+@UseGuards(OptionalJwtAuthGuard)
 export class TemptattoController {
   private readonly temptattoServiceUrl: string;
 
@@ -34,15 +37,18 @@ export class TemptattoController {
     const targetUrl = `${this.temptattoServiceUrl}${req.originalUrl}`;
 
     try {
+      const headers: Record<string, string> = {};
+      if (req.user) {
+        headers['x-user-id'] = req.user.sub;
+        headers['x-user-roles'] = (req.user.roles ?? []).join(',');
+      }
+
       const response = await firstValueFrom(
         this.httpService.request({
           method: req.method as Method,
           url: targetUrl,
           data: req.body,
-          headers: {
-            'x-user-id': req.user!.sub,
-            'x-user-roles': (req.user!.roles ?? []).join(','),
-          },
+          headers,
         }),
       );
       res.status(response.status).json(response.data);
