@@ -8,6 +8,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { EcomController } from './ecom/ecom.controller';
 import { EpidietController } from './epidiet/epidiet.controller';
 import { PaymentsController } from './payments/payments.controller';
+import { TemptattoController } from './temptatto/temptatto.controller';
 import { UsersController } from './users/users.controller';
 
 @Module({
@@ -36,7 +37,14 @@ import { UsersController } from './users/users.controller';
       ],
     }),
   ],
-  controllers: [AuthController, UsersController, PaymentsController, EpidietController, EcomController],
+  controllers: [
+    AuthController,
+    UsersController,
+    PaymentsController,
+    EpidietController,
+    EcomController,
+    TemptattoController,
+  ],
   providers: [JwtAuthGuard],
 })
 export class AppModule {}

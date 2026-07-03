@@ -80,6 +80,16 @@
         "plugins": ["@nestjs/swagger"]
       }
     },
+    "temptatto-service": {
+      "type": "application",
+      "root": "apps/temptatto-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/temptatto-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/temptatto-service/tsconfig.app.json",
+        "plugins": ["@nestjs/swagger"]
+      }
+    },
     "ai": {
       "type": "library",
       "root": "libs/ai",

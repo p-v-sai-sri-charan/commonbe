@@ -150,6 +150,23 @@ services:
       rabbitmq:
         condition: service_healthy
 
+  temptatto-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: temptatto-service
+    container_name: backend_temptatto_service
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TEMPTATTO_MONGO_URI: mongodb://mongodb:27017/temptatto_db
+    ports:
+      - '3007:3007'
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
   api-gateway:
     build:
       context: .
@@ -165,6 +182,7 @@ services:
       PAYMENT_SERVICE_URL: http://payment-service:3004
       EPIDIET_SERVICE_URL: http://epidiet-service:3005
       ECOM_SERVICE_URL: http://ecom-service:3006
+      TEMPTATTO_SERVICE_URL: http://temptatto-service:3007
     ports:
       - '3000:3000'
     depends_on:
@@ -173,6 +191,7 @@ services:
       - payment-service
       - epidiet-service
       - ecom-service
+      - temptatto-service
 
 volumes:
   mongo_data:
