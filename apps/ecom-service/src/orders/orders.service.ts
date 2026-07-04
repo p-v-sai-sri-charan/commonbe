@@ -118,8 +118,9 @@ export class OrdersService {
     if (!order) throw new NotFoundException('Order not found');
     if (order.paymentStatus === 'paid') throw new BadRequestException('Order already paid');
 
+    const isMockOrder = order.paymentOrderId?.startsWith('mock_');
     const keySecret = this.configService.get<string>('RAZORPAY_KEY_SECRET', '');
-    if (keySecret) {
+    if (keySecret && !isMockOrder) {
       const body = `${dto.razorpayOrderId}|${dto.razorpayPaymentId}`;
       const expectedSignature = createHmac('sha256', keySecret).update(body).digest('hex');
       if (expectedSignature !== dto.razorpaySignature) {
