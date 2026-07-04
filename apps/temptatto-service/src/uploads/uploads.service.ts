@@ -1,6 +1,6 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createHmac } from 'crypto';
+import { createHash } from 'crypto';
 
 @Injectable()
 export class UploadsService {
@@ -25,7 +25,7 @@ export class UploadsService {
 
     const timestamp = Math.round(Date.now() / 1000);
     const paramsToSign = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;
-    const signature = createHmac('sha256', apiSecret).update(paramsToSign).digest('hex');
+    const signature = createHash('sha256').update(paramsToSign).digest('hex');
 
     return { signature, timestamp, cloudName, apiKey, folder };
   }
