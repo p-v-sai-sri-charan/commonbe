@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthController } from './auth/auth.controller';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from './auth/optional-jwt-auth.guard';
 import { EcomController } from './ecom/ecom.controller';
 import { EpidietController } from './epidiet/epidiet.controller';
 import { PaymentsController } from './payments/payments.controller';
@@ -45,6 +46,6 @@ import { UsersController } from './users/users.controller';
     EcomController,
     TemptattoController,
   ],
-  providers: [JwtAuthGuard],
+  providers: [JwtAuthGuard, OptionalJwtAuthGuard],
 })
 export class AppModule {}

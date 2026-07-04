@@ -37,7 +37,9 @@ export class TemptattoController {
     const targetUrl = `${this.temptattoServiceUrl}${req.originalUrl}`;
 
     try {
-      const headers: Record<string, string> = {};
+      const headers: Record<string, string> = {
+        'content-type': (req.headers['content-type'] as string) ?? 'application/json',
+      };
       if (req.user) {
         headers['x-user-id'] = req.user.sub;
         headers['x-user-roles'] = (req.user.roles ?? []).join(',');

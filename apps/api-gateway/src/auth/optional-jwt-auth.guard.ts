@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AuthenticatedRequest, JwtPayload } from './jwt-auth.guard';
 
@@ -11,6 +11,8 @@ import { AuthenticatedRequest, JwtPayload } from './jwt-auth.guard';
  */
 @Injectable()
 export class OptionalJwtAuthGuard implements CanActivate {
+  private readonly logger = new Logger(OptionalJwtAuthGuard.name);
+
   constructor(private readonly jwtService: JwtService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -20,9 +22,10 @@ export class OptionalJwtAuthGuard implements CanActivate {
 
     try {
       request.user = await this.jwtService.verifyAsync<JwtPayload>(token);
-    } catch {
-      // Invalid/expired token on an optional route: proceed anonymously
-      // rather than failing the request.
+    } catch (err: unknown) {
+      // Invalid/expired token on an optional route: proceed anonymously.
+      // Log so mismatched JWT_SECRET or clock-skew issues are visible in gateway logs.
+      this.logger.warn(`JWT verification failed — proceeding anonymously: ${(err as Error).message}`);
     }
     return true;
   }
