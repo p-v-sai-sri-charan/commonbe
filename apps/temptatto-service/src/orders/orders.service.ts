@@ -109,7 +109,7 @@ export class OrdersService {
         const rzpRes = await fetch('https://api.razorpay.com/v1/orders', {
           method: 'POST',
           headers: { Authorization: `Basic ${basicAuth}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: total, currency: 'INR', receipt: order.id }),
+          body: JSON.stringify({ amount: total * 100, currency: 'INR', receipt: order.id }),
         });
         const rzpData = (await rzpRes.json()) as { id?: string };
         if (rzpData.id) razorpayOrderId = rzpData.id;
@@ -123,7 +123,7 @@ export class OrdersService {
     return {
       order,
       razorpayOrderId,
-      amount: total,
+      amount: total * 100,
       currency: 'INR',
       keyId: this.configService.get<string>('RAZORPAY_KEY_ID', ''),
     };
