@@ -103,6 +103,29 @@ export class Order {
 
   @Prop({ type: String, default: null })
   trackingNumber: string | null;
+
+  // NimbusPost B2B shipment fields
+  @Prop({ type: String, default: null })
+  awbNumber: string | null;
+
+  @Prop({ type: String, default: null })
+  courierId: string | null;
+
+  @Prop({ type: String, default: null })
+  courierName: string | null;
+
+  @Prop({ type: String, default: null })
+  nimbusShipmentId: string | null;
+
+  @Prop({ type: String, default: null })
+  labelUrl: string | null;
+
+  @Prop({ type: Date, default: null })
+  estimatedDelivery: Date | null;
+
+  /** Customer email captured at order creation for transactional notifications. */
+  @Prop({ type: String, default: null })
+  customerEmail: string | null;
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);

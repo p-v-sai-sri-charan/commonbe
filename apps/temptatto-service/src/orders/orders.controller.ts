@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Headers, Param, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Headers, Param, Post, Query } from '@nestjs/common';
 import { ApiHeader, ApiTags } from '@nestjs/swagger';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { VerifyPaymentDto } from './dto/verify-payment.dto';
@@ -18,6 +18,15 @@ export class OrdersController {
   @Post()
   createOrder(@Headers('x-user-id') userId: string, @Body() dto: CreateOrderDto) {
     return this.ordersService.createOrder(this.requireUserId(userId), dto);
+  }
+
+  /** Returns estimated delivery date for a destination pincode (production + transit). */
+  @Get('delivery-estimate')
+  getDeliveryEstimate(@Query('pincode') pincode: string) {
+    if (!pincode || !/^\d{6}$/.test(pincode)) {
+      throw new BadRequestException('pincode must be a 6-digit number');
+    }
+    return this.ordersService.getDeliveryEstimate(pincode);
   }
 
   @Get()

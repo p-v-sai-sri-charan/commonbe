@@ -31,4 +31,9 @@ export class CreateOrderDto {
   @ValidateNested()
   @Type(() => ShippingAddressDto)
   shippingAddress?: ShippingAddressDto;
+
+  /** Customer email for order confirmation and tracking notifications. */
+  @IsOptional()
+  @IsString()
+  customerEmail?: string;
 }

@@ -1,12 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
-import { NotificationsService, UserEventPayload } from './notifications.service';
+import { NotificationsService, OrderPaidPayload, UserEventPayload } from './notifications.service';
 
-/**
- * Message handlers for events published on RabbitMQ by auth-service (and,
- * later, other services). This is a microservice controller, not an HTTP
- * one — notification-service has no inbound HTTP routes.
- */
 @Controller()
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
@@ -19,5 +14,10 @@ export class NotificationsController {
   @EventPattern('user.login')
   async onUserLogin(@Payload() payload: UserEventPayload) {
     await this.notificationsService.handleUserLogin(payload);
+  }
+
+  @EventPattern('temptatto.order.paid')
+  async onOrderPaid(@Payload() payload: OrderPaidPayload) {
+    await this.notificationsService.handleOrderPaid(payload);
   }
 }
