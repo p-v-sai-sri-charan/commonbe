@@ -174,6 +174,7 @@ export class NimbusService {
       products: params.items.map((item) => ({
         product_name: item.name.slice(0, 200),
         product_hsn_code: PRODUCT_HSN,
+        product_tax_rate: 12,
         product_lbh_unit: 'cm',
         no_of_box: item.quantity,
         product_price: item.unitPrice.toString(),

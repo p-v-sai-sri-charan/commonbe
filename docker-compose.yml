@@ -161,10 +161,13 @@ services:
     env_file: .env
     environment:
       TEMPTATTO_MONGO_URI: mongodb://mongodb:27017/temptatto_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
     ports:
       - '3007:3007'
     depends_on:
       mongodb:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
 
   api-gateway:
