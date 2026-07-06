@@ -36,6 +36,9 @@ export class AdminConfig {
     default: ['Forearm', 'Wrist', 'Shoulder', 'Back', 'Ankle', 'Neck', 'Collarbone'],
   })
   defaultPlacements: string[];
+
+  @Prop({ type: Object })
+  siteTheme?: Record<string, unknown>;
 }
 
 export const AdminConfigSchema = SchemaFactory.createForClass(AdminConfig);

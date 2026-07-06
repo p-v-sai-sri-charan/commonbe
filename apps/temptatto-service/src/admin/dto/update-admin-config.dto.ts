@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsNumber, IsOptional, IsString, Max, Min, ValidateNested } from 'class-validator';
+import { IsArray, IsNumber, IsObject, IsOptional, IsString, Max, Min, ValidateNested } from 'class-validator';
 import { SizeOptionDto } from '../../products/dto/create-product.dto';
 
 export class UpdateAdminConfigDto {
@@ -24,4 +24,8 @@ export class UpdateAdminConfigDto {
   @IsArray()
   @IsString({ each: true })
   defaultPlacements?: string[];
+
+  @IsOptional()
+  @IsObject()
+  siteTheme?: Record<string, unknown>;
 }

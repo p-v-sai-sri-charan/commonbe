@@ -9,9 +9,8 @@ import { UpdateAdminConfigDto } from './dto/update-admin-config.dto';
 import { UpdateOrderFulfillmentDto } from './dto/update-order-fulfillment.dto';
 
 @ApiTags('admin')
-@ApiHeader({ name: 'x-user-id', required: true })
-@ApiHeader({ name: 'x-user-roles', required: true, description: 'Injected by gateway — must include "admin"' })
-@UseGuards(AdminGuard)
+@ApiHeader({ name: 'x-user-id', required: false })
+@ApiHeader({ name: 'x-user-roles', required: false, description: 'Injected by gateway — must include "admin" for write routes' })
 @Controller('admin')
 export class AdminController {
   constructor(
@@ -24,6 +23,7 @@ export class AdminController {
     return this.adminService.getConfig();
   }
 
+  @UseGuards(AdminGuard)
   @Patch('config')
   updateConfig(@Body() dto: UpdateAdminConfigDto) {
     return this.adminService.updateConfig(dto);
@@ -31,11 +31,13 @@ export class AdminController {
 
   // ── Orders ───────────────────────────────────────────────────────────────────
 
+  @UseGuards(AdminGuard)
   @Get('orders')
   getOrders(@Query('page') page = '1', @Query('limit') limit = '20') {
     return this.adminService.getAllOrders(Number(page), Number(limit));
   }
 
+  @UseGuards(AdminGuard)
   @Patch('orders/:id/fulfillment')
   updateFulfillment(@Param('id') id: string, @Body() dto: UpdateOrderFulfillmentDto) {
     return this.adminService.updateOrderFulfillment(id, dto.fulfillmentStatus, dto.trackingNumber);
@@ -43,21 +45,25 @@ export class AdminController {
 
   // ── Categories ───────────────────────────────────────────────────────────────
 
+  @UseGuards(AdminGuard)
   @Get('categories')
   getAllCategories() {
     return this.categoriesService.findAllAdmin();
   }
 
+  @UseGuards(AdminGuard)
   @Post('categories')
   createCategory(@Body() dto: CreateCategoryDto) {
     return this.categoriesService.create(dto);
   }
 
+  @UseGuards(AdminGuard)
   @Patch('categories/:id')
   updateCategory(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {
     return this.categoriesService.update(id, dto);
   }
 
+  @UseGuards(AdminGuard)
   @Delete('categories/:id')
   removeCategory(@Param('id') id: string) {
     return this.categoriesService.remove(id);
