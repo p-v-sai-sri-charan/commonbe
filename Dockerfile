@@ -10,14 +10,17 @@ COPY package*.json ./
 RUN npm ci
 COPY . .
 RUN npx nest build ${APP_NAME}
+# Prune dev deps here so the already-built native addons are kept intact
+RUN npm prune --omit=dev
 
 FROM node:20-alpine AS runtime
 ARG APP_NAME
 ENV APP_NAME=${APP_NAME}
 ENV NODE_ENV=production
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
+# Copy pruned node_modules from builder — avoids re-running npm ci on Alpine
+# without build tools, which breaks packages with native addons (bcrypt, etc.)
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 
 CMD ["sh", "-c", "node dist/apps/${APP_NAME}/main"]
