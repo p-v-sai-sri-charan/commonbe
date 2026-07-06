@@ -115,7 +115,7 @@ export class OrdersService {
       try {
         const amountPaise = total * 100;
         const receipt = (order as unknown as { _id: Types.ObjectId })._id.toString();
-        this.logger.log(`Razorpay: creating order — amount=${amountPaise} paise, receipt=${receipt}`);
+        this.logger.log(`Razorpay: creating order — amount=${amountPaise} paise, receipt=${receipt}, keyId="${keyId}" keySecretLen=${keySecret.length}`);
         const basicAuth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
         const rzpRes = await fetch('https://api.razorpay.com/v1/orders', {
           method: 'POST',
