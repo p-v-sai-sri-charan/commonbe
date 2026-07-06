@@ -79,6 +79,10 @@ export class Product {
   @Prop({ type: Number, default: null })
   stockQuantity: number | null;
 
+  /** Fulfillment modes this product supports: 'physical' | 'digital'. */
+  @Prop({ type: [String], enum: ['physical', 'digital'], default: ['physical'] })
+  fulfillmentTypes: string[];
+
   /** The blank-canvas product used by the "Create Design" CTA — seeded once, at most one should be true. */
   @Prop({ type: Boolean, default: false, index: true })
   isDefault: boolean;

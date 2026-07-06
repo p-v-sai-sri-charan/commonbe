@@ -120,4 +120,9 @@ export class CreateProductDto {
   @IsNumber()
   @Min(0)
   stockQuantity?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsIn(['physical', 'digital'], { each: true })
+  fulfillmentTypes?: string[];
 }
