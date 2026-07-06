@@ -7,7 +7,7 @@ FROM node:20-alpine AS builder
 ARG APP_NAME
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm install --prefer-offline
 COPY . .
 RUN npx nest build ${APP_NAME}
 # Prune dev deps here so the already-built native addons are kept intact
