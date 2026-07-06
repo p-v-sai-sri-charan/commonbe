@@ -113,17 +113,27 @@ export class OrdersService {
     const keySecret = this.configService.get<string>('RAZORPAY_KEY_SECRET');
     if (keyId && keySecret) {
       try {
+        const amountPaise = total * 100;
+        const receipt = (order as unknown as { _id: Types.ObjectId })._id.toString();
+        this.logger.log(`Razorpay: creating order — amount=${amountPaise} paise, receipt=${receipt}`);
         const basicAuth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
         const rzpRes = await fetch('https://api.razorpay.com/v1/orders', {
           method: 'POST',
           headers: { Authorization: `Basic ${basicAuth}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: total * 100, currency: 'INR', receipt: order.id }),
+          body: JSON.stringify({ amount: amountPaise, currency: 'INR', receipt }),
         });
-        const rzpData = (await rzpRes.json()) as { id?: string };
-        if (rzpData.id) razorpayOrderId = rzpData.id;
+        const rzpData = (await rzpRes.json()) as { id?: string; error?: { description: string } };
+        if (rzpData.id) {
+          razorpayOrderId = rzpData.id;
+          this.logger.log(`Razorpay: order created — ${rzpData.id}`);
+        } else {
+          this.logger.error(`Razorpay: no order id — ${JSON.stringify(rzpData)}`);
+        }
       } catch (err: any) {
-        this.logger.error(`Razorpay order creation failed: ${err.message}`);
+        this.logger.error(`Razorpay fetch threw: ${err.message}`);
       }
+    } else {
+      this.logger.warn(`Razorpay: missing credentials — KEY_ID=${keyId ? 'set' : 'MISSING'} KEY_SECRET=${keySecret ? 'set' : 'MISSING'} — using mock`);
     }
 
     await this.orderModel.updateOne({ _id: order.id }, { paymentOrderId: razorpayOrderId });
