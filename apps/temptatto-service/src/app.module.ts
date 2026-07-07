@@ -8,6 +8,8 @@ import { DesignsModule } from './designs/designs.module';
 import { MarketplaceModule } from './marketplace/marketplace.module';
 import { OrdersModule } from './orders/orders.module';
 import { ProductsModule } from './products/products.module';
+import { ReportsModule } from './reports/reports.module';
+import { ReviewsModule } from './reviews/reviews.module';
 import { StoreModule } from './store/store.module';
 import { UploadsModule } from './uploads/uploads.module';
 
@@ -28,6 +30,8 @@ import { UploadsModule } from './uploads/uploads.module';
     StoreModule,
     CartModule,
     OrdersModule,
+    ReviewsModule,
+    ReportsModule,
     AdminModule,
     UploadsModule,
   ],

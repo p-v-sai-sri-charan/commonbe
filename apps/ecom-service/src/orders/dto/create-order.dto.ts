@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsMongoId, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { IsEmail, IsMongoId, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 export class ShippingAddressDto {
   @IsString()
@@ -29,4 +29,8 @@ export class CreateOrderDto {
   @ValidateNested()
   @Type(() => ShippingAddressDto)
   shippingAddress: ShippingAddressDto;
+
+  @IsOptional()
+  @IsEmail()
+  customerEmail?: string;
 }

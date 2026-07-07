@@ -1,9 +1,11 @@
-import { Controller, Get, Headers, Query } from '@nestjs/common';
+import { Controller, Get, Headers, Query, UseGuards } from '@nestjs/common';
 import { ApiHeader, ApiTags } from '@nestjs/swagger';
+import { RequireUserGuard } from '../common/guards/require-user.guard';
 import { UploadsService } from './uploads.service';
 
 @ApiTags('uploads')
 @ApiHeader({ name: 'x-user-id', required: true, description: 'Injected by gateway from JWT' })
+@UseGuards(RequireUserGuard)
 @Controller('uploads')
 export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) {}

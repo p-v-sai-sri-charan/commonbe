@@ -10,6 +10,8 @@ import { DesignsModule } from './designs/designs.module';
 import { MarketplaceModule } from './marketplace/marketplace.module';
 import { OrdersModule } from './orders/orders.module';
 import { ProductsModule } from './products/products.module';
+import { ReportsModule } from './reports/reports.module';
+import { ReviewsModule } from './reviews/reviews.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { EventsModule } from './events/events.module';
 
@@ -31,6 +33,8 @@ import { EventsModule } from './events/events.module';
     AiGenerationModule,
     CartModule,
     OrdersModule,
+    ReviewsModule,
+    ReportsModule,
     AdminModule,
     UploadsModule,
     EventsModule,

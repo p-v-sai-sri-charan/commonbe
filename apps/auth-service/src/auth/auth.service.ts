@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -25,7 +26,34 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly sessionService: SessionService,
     private readonly authEventsService: AuthEventsService,
+    private readonly configService: ConfigService,
   ) {}
+
+  /**
+   * Grants the admin role to mobile numbers listed in ADMIN_MOBILE_NUMBERS
+   * (comma-separated, any format normalizeIndianMobile accepts). Grant-only:
+   * removing a number from the env does not revoke an already-granted role —
+   * revoke by editing the user document directly.
+   */
+  private async syncAdminRole(user: AuthUserDocument): Promise<void> {
+    if (!user.mobileNumber || user.roles.includes('admin')) return;
+    const raw = this.configService.get<string>('ADMIN_MOBILE_NUMBERS', '');
+    if (!raw) return;
+    const adminNumbers = raw
+      .split(',')
+      .map((n) => {
+        try {
+          return this.normalizeIndianMobile(n.trim());
+        } catch {
+          return null;
+        }
+      })
+      .filter((n): n is string => n !== null);
+    if (adminNumbers.includes(user.mobileNumber)) {
+      user.roles.push('admin');
+      await user.save();
+    }
+  }
 
   /** Normalizes Indian mobile numbers to E.164 (+91XXXXXXXXXX) and validates them. */
   private normalizeIndianMobile(raw: string): string {
@@ -138,6 +166,8 @@ export class AuthService {
       user.lastLoginAt = new Date();
       await user.save();
     }
+
+    await this.syncAdminRole(user);
 
     const deviceInfo: DeviceInfo = { deviceId: dto.deviceId, deviceName: dto.deviceName, ...device };
     const result = await this.issueTokens(user, deviceInfo);

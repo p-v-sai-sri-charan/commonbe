@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Headers, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiHeader, ApiTags } from '@nestjs/swagger';
+import { RequireUserGuard } from '../common/guards/require-user.guard';
 import { CreatorService } from './creator.service';
 import { CreateCreatorProfileDto } from './dto/create-creator-profile.dto';
 import { SetByokDto } from './dto/byok.dto';
@@ -8,6 +9,7 @@ import { CreatePayoutRequestDto } from './dto/create-payout-request.dto';
 
 @ApiTags('creator')
 @ApiHeader({ name: 'x-user-id', required: true, description: 'Injected by gateway from JWT' })
+@UseGuards(RequireUserGuard)
 @Controller('creator')
 export class CreatorController {
   constructor(private readonly creatorService: CreatorService) {}

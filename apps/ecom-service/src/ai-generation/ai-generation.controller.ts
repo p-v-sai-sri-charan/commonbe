@@ -1,10 +1,12 @@
-import { Body, Controller, Get, Headers, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiHeader, ApiTags } from '@nestjs/swagger';
+import { RequireUserGuard } from '../common/guards/require-user.guard';
 import { AiGenerationService } from './ai-generation.service';
 import { GenerateImageDto } from './dto/generate-image.dto';
 
 @ApiTags('ai-generation')
 @ApiHeader({ name: 'x-user-id', required: true, description: 'Injected by gateway from JWT' })
+@UseGuards(RequireUserGuard)
 @Controller('ai-generation')
 export class AiGenerationController {
   constructor(private readonly aiGenerationService: AiGenerationService) {}

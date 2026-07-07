@@ -1,10 +1,12 @@
-import { Body, Controller, Delete, Get, Headers, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Post, UseGuards } from '@nestjs/common';
 import { ApiHeader, ApiTags } from '@nestjs/swagger';
+import { RequireUserGuard } from '../common/guards/require-user.guard';
 import { CartService } from './cart.service';
 import { UpsertCartItemDto } from './dto/upsert-cart-item.dto';
 
 @ApiTags('cart')
 @ApiHeader({ name: 'x-user-id', required: true, description: 'Injected by gateway from JWT' })
+@UseGuards(RequireUserGuard)
 @Controller('cart')
 export class CartController {
   constructor(private readonly cartService: CartService) {}

@@ -5,6 +5,7 @@ import { CartModule } from '../cart/cart.module';
 import { CreatorModule } from '../creator/creator.module';
 import { Design, DesignSchema } from '../designs/schemas/design.schema';
 import { Product, ProductSchema } from '../products/schemas/product.schema';
+import { NimbusModule } from '../shipping/nimbus.module';
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 import { Order, OrderSchema } from './schemas/order.schema';
@@ -19,6 +20,7 @@ import { Order, OrderSchema } from './schemas/order.schema';
     CartModule,
     CreatorModule,
     AiCreditsModule,
+    NimbusModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

@@ -75,6 +75,17 @@ export class Design {
 
   @Prop({ type: Number, default: 0 })
   salesCount: number;
+
+  /** Denormalized from ecom_reviews — recomputed by ReviewsService on every review write. */
+  @Prop({ type: Number, default: 0, min: 0, max: 5 })
+  ratingAvg: number;
+
+  @Prop({ type: Number, default: 0, min: 0 })
+  ratingCount: number;
+
+  /** Set only by admin takedown; a non-null value means the design was force-unpublished. */
+  @Prop({ type: String, default: null })
+  takedownReason: string | null;
 }
 
 export const DesignSchema = SchemaFactory.createForClass(Design);

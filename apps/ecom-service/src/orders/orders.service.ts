@@ -13,12 +13,16 @@ import { CartService } from '../cart/cart.service';
 import { CreatorService } from '../creator/creator.service';
 import { Design, DesignDocument } from '../designs/schemas/design.schema';
 import { Product, ProductDocument } from '../products/schemas/product.schema';
+import { NimbusService } from '../shipping/nimbus.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { VerifyPaymentDto } from './dto/verify-payment.dto';
 import { Order, OrderDocument } from './schemas/order.schema';
 
 const SHIPPING_COST = 0;
 const DESIGN_PURCHASE_BONUS_CREDITS = 20;
+/** Print-on-demand: days to print + typical courier transit across India. */
+const PRODUCTION_DAYS = 3;
+const TRANSIT_DAYS = 5;
 
 @Injectable()
 export class OrdersService {
@@ -31,6 +35,7 @@ export class OrdersService {
     private readonly creatorService: CreatorService,
     private readonly aiCreditsService: AiCreditsService,
     private readonly configService: ConfigService,
+    private readonly nimbusService: NimbusService,
   ) {}
 
   async createOrder(userId: string, dto: CreateOrderDto): Promise<{ order: Order; razorpayOrderId: string; amount: number; currency: string; keyId: string }> {
@@ -51,6 +56,23 @@ export class OrdersService {
     const orderItems = cart.items.map((cartItem) => {
       const product = productMap.get(cartItem.productId.toString());
       if (!product) throw new BadRequestException(`Product ${cartItem.productId} not found`);
+
+      // Stock check: the variant/size must exist and cover the requested quantity.
+      // Actual decrement happens after payment succeeds (postPaymentActions).
+      const variant = product.variants.find(
+        (v) => v.color.toLowerCase() === cartItem.variantColor.toLowerCase(),
+      );
+      const sizeStock = variant?.sizes.find((s) => s.size === cartItem.size);
+      if (!variant || !sizeStock) {
+        throw new BadRequestException(
+          `${product.name} is not available in ${cartItem.variantColor} / ${cartItem.size}`,
+        );
+      }
+      if (sizeStock.stock < cartItem.quantity) {
+        throw new BadRequestException(
+          `Only ${sizeStock.stock} left of ${product.name} (${cartItem.variantColor} / ${cartItem.size}) — reduce the quantity`,
+        );
+      }
 
       const design = cartItem.designId ? designMap.get(cartItem.designId.toString()) : null;
       const designPrice = design?.price ?? 0;
@@ -81,6 +103,7 @@ export class OrdersService {
       shippingAddress: dto.shippingAddress,
       shippingCost: SHIPPING_COST,
       total,
+      customerEmail: dto.customerEmail ?? null,
       paymentStatus: 'pending',
     });
 
@@ -154,6 +177,23 @@ export class OrdersService {
     }
 
     for (const item of order.items) {
+      // Decrement variant/size stock. Atomic $inc with arrayFilters; floor guard at
+      // the query level so a concurrent sell-out can't push stock below zero.
+      try {
+        await this.productModel.updateOne(
+          { _id: item.productId },
+          { $inc: { 'variants.$[v].sizes.$[s].stock': -item.quantity } },
+          {
+            arrayFilters: [
+              { 'v.color': item.variantColor },
+              { 's.size': item.size, 's.stock': { $gte: item.quantity } },
+            ],
+          },
+        );
+      } catch (err: any) {
+        this.logger.error(`Stock decrement failed for product ${item.productId}: ${err.message}`);
+      }
+
       if (item.designerId && item.commissionAmount > 0) {
         try {
           await this.creatorService.addEarnings(item.designerId, item.commissionAmount * item.quantity);
@@ -167,7 +207,57 @@ export class OrdersService {
       }
     }
 
+    // Create NimbusPost shipment (no-op when NIMBUSPOST_* env is unset — dev mode)
+    order.fulfillmentStatus = 'processing';
+    order.estimatedDelivery = this.computeEstimatedDelivery();
+    await order.save();
+
+    try {
+      const shipment = await this.nimbusService.createShipment({
+        orderId: (order as any)._id.toString(),
+        shippingAddress: order.shippingAddress,
+        items: order.items.map((i) => ({
+          name: `Custom T-Shirt (${i.variantColor}/${i.size})`,
+          quantity: i.quantity,
+          unitPrice: Math.round(i.unitPrice / 100),
+        })),
+        invoiceValue: Math.round(order.total / 100),
+      });
+
+      if (shipment) {
+        order.awbNumber = shipment.awbNumber;
+        order.courierId = shipment.courierId;
+        order.courierName = shipment.courierName;
+        order.nimbusShipmentId = shipment.shipmentId;
+        order.trackingNumber = shipment.awbNumber;
+        order.labelUrl = shipment.labelUrl;
+        await order.save();
+        this.logger.log(`NimbusPost shipment created: AWB ${shipment.awbNumber} for order ${(order as any)._id}`);
+      }
+    } catch (err: any) {
+      this.logger.error(`NimbusPost shipment failed for order ${(order as any)._id}: ${err.message}`);
+    }
+
     await this.cartService.clearCart(buyerUserId);
+  }
+
+  private computeEstimatedDelivery(): Date {
+    const date = new Date();
+    date.setDate(date.getDate() + PRODUCTION_DAYS + TRANSIT_DAYS);
+    return date;
+  }
+
+  async getDeliveryEstimate(destinationPincode: string): Promise<{ estimatedDelivery: string }> {
+    const warehousePincode = this.configService.get<string>('NIMBUSPOST_WAREHOUSE_PINCODE', '');
+
+    if (warehousePincode && destinationPincode.length === 6) {
+      // Fire-and-forget serviceability check — we use fixed days regardless
+      this.nimbusService
+        .checkServiceability(warehousePincode, destinationPincode)
+        .catch((err) => this.logger.warn(`Serviceability pre-check failed: ${err.message}`));
+    }
+
+    return { estimatedDelivery: this.computeEstimatedDelivery().toISOString() };
   }
 
   async getMyOrders(userId: string): Promise<Order[]> {
@@ -186,5 +276,46 @@ export class OrdersService {
     const order = await this.orderModel.findByIdAndUpdate(orderId, update, { new: true });
     if (!order) throw new NotFoundException('Order not found');
     return order;
+  }
+
+  /**
+   * Admin-only refund: marks the order refunded/cancelled, restores variant
+   * stock, and cancels the NimbusPost shipment if one was created. The actual
+   * money movement happens in the Razorpay dashboard — this records the outcome.
+   */
+  async adminRefund(orderId: string): Promise<Order> {
+    const order = await this.orderModel.findById(orderId);
+    if (!order) throw new NotFoundException('Order not found');
+    if (order.paymentStatus !== 'paid') {
+      throw new BadRequestException(`Only paid orders can be refunded (this one is '${order.paymentStatus}')`);
+    }
+    if (order.fulfillmentStatus === 'delivered') {
+      throw new BadRequestException('Delivered orders cannot be refunded from here — handle via support');
+    }
+
+    for (const item of order.items) {
+      try {
+        await this.productModel.updateOne(
+          { _id: item.productId },
+          { $inc: { 'variants.$[v].sizes.$[s].stock': item.quantity } },
+          {
+            arrayFilters: [{ 'v.color': item.variantColor }, { 's.size': item.size }],
+          },
+        );
+      } catch (err: any) {
+        this.logger.error(`Stock restore failed for product ${item.productId}: ${err.message}`);
+      }
+    }
+
+    if (order.awbNumber) {
+      const cancelled = await this.nimbusService.cancelShipment(order.awbNumber);
+      if (!cancelled) {
+        this.logger.warn(`NimbusPost cancel failed for AWB ${order.awbNumber} — cancel manually in the dashboard`);
+      }
+    }
+
+    order.paymentStatus = 'refunded';
+    order.fulfillmentStatus = 'cancelled';
+    return order.save();
   }
 }

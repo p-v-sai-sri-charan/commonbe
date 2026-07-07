@@ -98,6 +98,29 @@ export class Order {
   @Prop({ type: String, default: null })
   trackingNumber: string | null;
 
+  // NimbusPost B2B shipment fields
+  @Prop({ type: String, default: null })
+  awbNumber: string | null;
+
+  @Prop({ type: String, default: null })
+  courierId: string | null;
+
+  @Prop({ type: String, default: null })
+  courierName: string | null;
+
+  @Prop({ type: String, default: null })
+  nimbusShipmentId: string | null;
+
+  @Prop({ type: String, default: null })
+  labelUrl: string | null;
+
+  @Prop({ type: Date, default: null })
+  estimatedDelivery: Date | null;
+
+  /** Captured at checkout for order confirmation / receipts. */
+  @Prop({ type: String, default: null })
+  customerEmail: string | null;
+
   @Prop({ type: Boolean, default: false })
   aiCreditsBonusGranted: boolean;
 }

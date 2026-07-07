@@ -43,6 +43,11 @@ export class DesignsService {
 
   async publish(id: string, userId: string, dto: PublishDesignDto): Promise<Design> {
     const design = await this.findByIdForUser(id, userId);
+    if (design.takedownReason) {
+      throw new ForbiddenException(
+        `This design was removed by a moderator (${design.takedownReason}) and cannot be republished. Contact support if you believe this is a mistake.`,
+      );
+    }
     design.status = 'published';
     design.isMarketplaceListed = dto.isMarketplaceListed;
     if (dto.price !== undefined) design.price = dto.price;
@@ -60,6 +65,22 @@ export class DesignsService {
   async remove(id: string, userId: string): Promise<void> {
     await this.findByIdForUser(id, userId);
     await this.designModel.findByIdAndDelete(id);
+  }
+
+  /** Force-unpublish by a moderator; the recorded reason also blocks owner re-publish. */
+  async adminTakedown(id: string, reason: string): Promise<Design> {
+    const design = await this.findById(id);
+    design.status = 'rejected';
+    design.isMarketplaceListed = false;
+    design.takedownReason = reason;
+    return design.save();
+  }
+
+  async adminRestore(id: string): Promise<Design> {
+    const design = await this.findById(id);
+    design.takedownReason = null;
+    if (design.status === 'rejected') design.status = 'draft';
+    return design.save();
   }
 
   async incrementSales(id: string): Promise<void> {
