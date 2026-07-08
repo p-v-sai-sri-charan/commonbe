@@ -4,7 +4,9 @@ import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 import { AdminConfig, AdminConfigSchema } from './schemas/admin-config.schema';
 import { DesignsModule } from '../designs/designs.module';
+import { OrdersModule } from '../orders/orders.module';
 import { Order, OrderSchema } from '../orders/schemas/order.schema';
+import { PodModule } from '../printondemand/pod.module';
 import { PayoutRequest, PayoutRequestSchema } from '../creator/schemas/payout-request.schema';
 import { ReportsModule } from '../reports/reports.module';
 import { ReviewsModule } from '../reviews/reviews.module';
@@ -19,6 +21,8 @@ import { ReviewsModule } from '../reviews/reviews.module';
     ReviewsModule,
     ReportsModule,
     DesignsModule,
+    OrdersModule,
+    PodModule,
   ],
   controllers: [AdminController],
   providers: [AdminService],

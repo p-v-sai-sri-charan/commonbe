@@ -21,6 +21,15 @@ export class ProductVariant {
   color: string;
   hexCode: string;
   sizes: SizeStock[];
+  /** Provider color code for POD SKU building, e.g. Qikink "Wh" for White. */
+  podColorCode?: string;
+}
+
+/** Print-on-demand catalog mapping. SKU sent to the provider = `${baseSku}-${variant.podColorCode}-${size}`. */
+export class PodConfig {
+  provider: string;
+  printTypeId: number;
+  baseSku: string;
 }
 
 export class ProductImage {
@@ -48,11 +57,31 @@ export class Product {
         color: String,
         hexCode: String,
         sizes: [{ size: String, stock: Number }],
+        podColorCode: { type: String, default: null },
       },
     ],
     default: [],
   })
   variants: ProductVariant[];
+
+  /** Null = product not eligible for print-on-demand fulfillment. */
+  @Prop({
+    type: { provider: String, printTypeId: Number, baseSku: String },
+    default: null,
+  })
+  pod: PodConfig | null;
+
+  /** Qikink catalog style this product was enabled from (null = manually created). */
+  @Prop({ type: String, default: null, index: true })
+  styleKey: string | null;
+
+  /** GLB for the studio 3D preview. Null → tshirt garments fall back to the default shirt model; others render 2D-only. */
+  @Prop({ type: String, default: null })
+  model3dUrl: string | null;
+
+  /** tshirt | polo | hoodie | … — drives 3D-model fallback + shop filtering. */
+  @Prop({ type: String, default: 'tshirt' })
+  garmentType: string;
 
   @Prop({ type: String, enum: ['full', 'limited'], default: 'full' })
   designAreaType: DesignAreaType;

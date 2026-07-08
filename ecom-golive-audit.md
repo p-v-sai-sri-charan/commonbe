@@ -96,14 +96,56 @@ Frontend deployed target: `NEXT_PUBLIC_API_URL=https://api.nexusagents.cloud`.
 - **Atlas password rotated by user (confirmed)**; old credential scrubbed from `.env.example`
   (now localhost placeholders). Note: the old string is still in git history — harmless since rotated.
 
+**Fixed 2026-07-07 (Qikink print-on-demand session):**
+- **Qikink POD integrated** (real API, not placeholder — schema extracted from their Postman collection
+  via `documenter.gw.postman.com/api/collections/26157218/2sB3QKqpma`). New `printondemand/` module in
+  ecom-service: `PodProvider` interface + `PodService` dispatcher (payment/SMS provider-strategy shape,
+  more POD providers pluggable later) + `QikinkProvider` (token POST /api/token form-encoded, cached to
+  expires_in; order POST /api/order/create; status GET /api/order?id=).
+- **Workflow change:** NimbusPost shipment is NO LONGER auto-created on payment. Admin categorizes each
+  paid order (`PATCH /ecom/admin/orders/:id/category`, orderType inhouse|custom|print_on_demand):
+  inhouse/custom → Nimbus shipment created then; print_on_demand → Qikink order created automatically
+  (qikink_shipping=1, gateway=Prepaid, paise→rupees). Uncategorized paid orders show a red badge in
+  /admin/orders. POD status sync: `POST /ecom/admin/orders/:id/pod-sync` (pulls status/AWB/tracking_link).
+- SKU mapping: `product.pod = { provider:'qikink', printTypeId, baseSku }` + per-variant `podColorCode`;
+  provider SKU = `baseSku-colorCode-size`. POD items REQUIRE a design thumbnailUrl (design_code=designId
+  so Qikink reuses the design on repeat orders). Admin product form has the pod fields; variant color
+  codes via Swagger like variants.
+- Refund of a POD order logs a warning — Qikink has NO cancel API; cancel in their dashboard manually.
+- Envs (documented in .env.example): QIKINK_CLIENT_ID, QIKINK_CLIENT_SECRET, QIKINK_BASE_URL
+  (default sandbox.qikink.com; live api.qikink.com requires requesting access in their dashboard).
+- Builds green: ecom-service + frontend.
+
+**Fixed 2026-07-08 (Qikink catalog mapping session):**
+- **POD catalog built from Qikink's SKU Descriptions xlsx** (`commonbe/sku_descriptions.xlsx`, 2,794
+  SKUs / 154 categories). `scripts/generate_qikink_catalog.py` curates 45 wearable DTG styles
+  (AOP + non-garments excluded — studio only does front decals) into
+  `ecom-service/printondemand/data/qikink-apparel-catalog.ts`: baseSku, colors (SKU code + garment
+  hex I assigned for the 50-color universe), sizes (incl. kids 0_12…13Yrs), Qikink cost price.
+- **Admin "enable each style"**: new `/admin/pod-catalog` page (grouped by gender, color swatches,
+  cost shown, margin calculator). Enable → prompts retail ₹ (+ optional GLB URL) → creates a fully
+  wired Product (pod config, variants with podColorCode, sizes @ placeholder stock 500, tags).
+  Disable → isActive false. Re-enable reactivates + reprices. Backend guard rejects retail < cost.
+- **Multi-garment 3D**: Product gained `styleKey`, `garmentType`, `model3dUrl`. Studio uses
+  product.model3dUrl if set; tshirt-type garments fall back to shirt_baked.glb; other garments
+  without a GLB are 2D-only (3D toggle hidden). Drop in new .glb files per style whenever sourced —
+  set model3dUrl at enable time or via product PATCH.
+- Builds green: ecom-service + frontend (24 routes incl. /admin/pod-catalog).
+
 **REMAINING — ops/user-only tasks (no code left):**
 1. Create real support email (placeholder support@ustyld.com in all 3 policy pages); set
    NEXT_PUBLIC_SITE_URL; fill NIMBUSPOST_* + ADMIN_MOBILE_NUMBERS in prod env; verify
    NODE_ENV=production on deployed gateway (OTP echoes in responses otherwise!); RabbitMQ up.
 2. **E2E smoke test against a live DB (never done):** OTP login → admin role grant → product create →
    studio design → cart → checkout (validation + delivery estimate) → mock payment → stock decrement
-   → review submit → report → takedown from /admin/reports → refund from /admin/orders.
+   → admin categorize (inhouse → Nimbus / POD → Qikink sandbox) → review submit → report → takedown
+   from /admin/reports → refund from /admin/orders.
 3. Read through policy pages before Razorpay KYC submission (sane draft, not legal advice).
-4. Integrate Qikink Admin decides which one will goto which currently i am thinking inhouse orders, qikink orders, custom order 3 categories qikink orders can be automated create a new service for printondemand so that we can add multiple print on demand services later.
+4. Qikink ops: fill QIKINK_CLIENT_ID/SECRET (sandbox first), request Live API access in their
+   dashboard, set pod.baseSku/printTypeId + variant podColorCodes on POD-eligible products (SKU codes
+   from dashboard.qikink.com → Products → SKU Descriptions), test one sandbox order end-to-end.
+5. **⚠ Atlas credential is NOT scrubbed** (contrary to the earlier note above): commonbe/.env.example
+   lines 13-14 still contain the real mongodb+srv string (user chinnu143313) in HEAD. Rotate-confirmed
+   or not, scrub it and commit.
 
 [[backend-monorepo-status]] [[temptatto-service-design]]

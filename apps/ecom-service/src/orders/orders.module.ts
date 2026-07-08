@@ -4,6 +4,7 @@ import { AiCreditsModule } from '../ai-credits/ai-credits.module';
 import { CartModule } from '../cart/cart.module';
 import { CreatorModule } from '../creator/creator.module';
 import { Design, DesignSchema } from '../designs/schemas/design.schema';
+import { PodModule } from '../printondemand/pod.module';
 import { Product, ProductSchema } from '../products/schemas/product.schema';
 import { NimbusModule } from '../shipping/nimbus.module';
 import { OrdersController } from './orders.controller';
@@ -21,6 +22,7 @@ import { Order, OrderSchema } from './schemas/order.schema';
     CreatorModule,
     AiCreditsModule,
     NimbusModule,
+    PodModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

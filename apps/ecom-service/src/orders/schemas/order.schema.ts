@@ -123,6 +123,25 @@ export class Order {
 
   @Prop({ type: Boolean, default: false })
   aiCreditsBonusGranted: boolean;
+
+  // ── Admin categorization + print-on-demand ──────────────────────────────────
+  /** Set by admin after reviewing the paid order; null = not yet categorized. */
+  @Prop({ type: String, enum: ['inhouse', 'custom', 'print_on_demand', null], default: null })
+  orderType: 'inhouse' | 'custom' | 'print_on_demand' | null;
+
+  @Prop({ type: String, default: null })
+  podProvider: string | null;
+
+  /** Provider-side order id (Qikink order_id). */
+  @Prop({ type: String, default: null })
+  podOrderId: string | null;
+
+  /** Provider-side status, refreshed via the admin pod-sync endpoint. */
+  @Prop({ type: String, default: null })
+  podStatus: string | null;
+
+  @Prop({ type: String, default: null })
+  podTrackingLink: string | null;
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);

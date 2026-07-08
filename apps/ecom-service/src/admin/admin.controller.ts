@@ -6,7 +6,11 @@ import { TakedownDesignDto } from '../reports/dto/takedown-design.dto';
 import { UpdateReportStatusDto } from '../reports/dto/update-report-status.dto';
 import { ReportsService } from '../reports/reports.service';
 import { ReviewsService } from '../reviews/reviews.service';
+import { OrdersService } from '../orders/orders.service';
+import { PodCatalogService } from '../printondemand/pod-catalog.service';
 import { AdminService } from './admin.service';
+import { EnablePodStyleDto } from './dto/enable-pod-style.dto';
+import { SetOrderCategoryDto } from './dto/set-order-category.dto';
 import { UpdateAdminConfigDto } from './dto/update-admin-config.dto';
 import { UpdateOrderFulfillmentDto } from './dto/update-order-fulfillment.dto';
 import { UpdatePayoutStatusDto } from './dto/update-payout-status.dto';
@@ -22,6 +26,8 @@ export class AdminController {
     private readonly reviewsService: ReviewsService,
     private readonly reportsService: ReportsService,
     private readonly designsService: DesignsService,
+    private readonly ordersService: OrdersService,
+    private readonly podCatalogService: PodCatalogService,
   ) {}
 
   @Get('config')
@@ -44,6 +50,41 @@ export class AdminController {
   @Patch('orders/:id/fulfillment')
   updateFulfillment(@Param('id') id: string, @Body() dto: UpdateOrderFulfillmentDto) {
     return this.adminService.updateOrderFulfillment(id, dto.fulfillmentStatus, dto.trackingNumber);
+  }
+
+  /**
+   * Categorize a paid order: inhouse/custom → NimbusPost shipment,
+   * print_on_demand → creates the Qikink order automatically.
+   */
+  @Patch('orders/:id/category')
+  setOrderCategory(@Param('id') id: string, @Body() dto: SetOrderCategoryDto) {
+    return this.ordersService.setOrderCategory(id, dto.orderType);
+  }
+
+  /** Refresh POD order status (and AWB/tracking link once shipped) from the provider. */
+  @Post('orders/:id/pod-sync')
+  syncPodStatus(@Param('id') id: string) {
+    return this.ordersService.syncPodStatus(id);
+  }
+
+  // ── Print-on-demand catalog (Qikink garment styles) ──────────────────────────
+
+  /** All enable-able Qikink garment styles, with enabled/product state per style. */
+  @Get('pod-catalog')
+  getPodCatalog() {
+    return this.podCatalogService.list();
+  }
+
+  /** Enable a style: creates (or reactivates) a Product fully wired for Qikink POD. */
+  @Post('pod-catalog/:styleKey/enable')
+  enablePodStyle(@Param('styleKey') styleKey: string, @Body() dto: EnablePodStyleDto) {
+    return this.podCatalogService.enable(styleKey, dto);
+  }
+
+  /** Disable a style: hides its Product from the shop/studio (isActive=false). */
+  @Post('pod-catalog/:styleKey/disable')
+  disablePodStyle(@Param('styleKey') styleKey: string) {
+    return this.podCatalogService.disable(styleKey);
   }
 
   // ── Payouts ──────────────────────────────────────────────────────────────────

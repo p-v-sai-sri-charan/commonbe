@@ -31,6 +31,24 @@ export class ProductVariantDto {
   @ValidateNested({ each: true })
   @Type(() => SizeStockDto)
   sizes: SizeStockDto[];
+
+  /** Provider color code for POD SKU building, e.g. Qikink "Wh" for White. */
+  @IsOptional()
+  @IsString()
+  podColorCode?: string;
+}
+
+export class PodConfigDto {
+  @IsIn(['qikink'])
+  provider: string;
+
+  /** Qikink print technique: 1=DTG, 2=AOP, 3=Embroidery, 17=DTF, … */
+  @IsNumber()
+  printTypeId: number;
+
+  /** Provider base SKU without color/size suffix, e.g. "MVnHs". */
+  @IsString()
+  baseSku: string;
 }
 
 export class ProductImageDto {
@@ -101,4 +119,22 @@ export class CreateProductDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PodConfigDto)
+  pod?: PodConfigDto;
+
+  @IsOptional()
+  @IsString()
+  styleKey?: string;
+
+  /** GLB URL for the studio 3D preview (upload the model, e.g. to Cloudinary raw). */
+  @IsOptional()
+  @IsString()
+  model3dUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  garmentType?: string;
 }

@@ -12,6 +12,8 @@ import { AiCreditsService } from '../ai-credits/ai-credits.service';
 import { CartService } from '../cart/cart.service';
 import { CreatorService } from '../creator/creator.service';
 import { Design, DesignDocument } from '../designs/schemas/design.schema';
+import { PodOrderInput } from '../printondemand/pod-provider.interface';
+import { PodService } from '../printondemand/pod.service';
 import { Product, ProductDocument } from '../products/schemas/product.schema';
 import { NimbusService } from '../shipping/nimbus.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -36,6 +38,7 @@ export class OrdersService {
     private readonly aiCreditsService: AiCreditsService,
     private readonly configService: ConfigService,
     private readonly nimbusService: NimbusService,
+    private readonly podService: PodService,
   ) {}
 
   async createOrder(userId: string, dto: CreateOrderDto): Promise<{ order: Order; razorpayOrderId: string; amount: number; currency: string; keyId: string }> {
@@ -207,11 +210,17 @@ export class OrdersService {
       }
     }
 
-    // Create NimbusPost shipment (no-op when NIMBUSPOST_* env is unset — dev mode)
+    // Shipment/POD creation is deferred to admin categorization (setOrderCategory):
+    // inhouse/custom → NimbusPost shipment, print_on_demand → Qikink order.
     order.fulfillmentStatus = 'processing';
     order.estimatedDelivery = this.computeEstimatedDelivery();
     await order.save();
 
+    await this.cartService.clearCart(buyerUserId);
+  }
+
+  /** NimbusPost shipment for in-house fulfilled orders (no-op when NIMBUSPOST_* env unset). */
+  private async createNimbusShipment(order: OrderDocument): Promise<void> {
     try {
       const shipment = await this.nimbusService.createShipment({
         orderId: (order as any)._id.toString(),
@@ -231,14 +240,142 @@ export class OrdersService {
         order.nimbusShipmentId = shipment.shipmentId;
         order.trackingNumber = shipment.awbNumber;
         order.labelUrl = shipment.labelUrl;
-        await order.save();
         this.logger.log(`NimbusPost shipment created: AWB ${shipment.awbNumber} for order ${(order as any)._id}`);
       }
     } catch (err: any) {
       this.logger.error(`NimbusPost shipment failed for order ${(order as any)._id}: ${err.message}`);
     }
+  }
 
-    await this.cartService.clearCart(buyerUserId);
+  /**
+   * Admin categorization — the fulfillment decision point. inhouse/custom get a
+   * NimbusPost shipment (if none yet); print_on_demand creates the provider order
+   * (Qikink) which then handles printing AND shipping. POD creation is atomic-ish:
+   * if the provider rejects the order, nothing is saved and the admin sees the error.
+   */
+  async setOrderCategory(
+    orderId: string,
+    orderType: 'inhouse' | 'custom' | 'print_on_demand',
+  ): Promise<Order> {
+    const order = await this.orderModel.findById(orderId);
+    if (!order) throw new NotFoundException('Order not found');
+    if (order.paymentStatus !== 'paid') {
+      throw new BadRequestException(`Only paid orders can be categorized (this one is '${order.paymentStatus}')`);
+    }
+
+    if (orderType === 'print_on_demand') {
+      if (order.podOrderId) {
+        throw new BadRequestException(`A ${order.podProvider} order already exists for this order (${order.podOrderId})`);
+      }
+      const input = await this.buildPodOrderInput(order);
+      const result = await this.podService.createOrder('qikink', input);
+      order.podProvider = 'qikink';
+      order.podOrderId = result.podOrderId;
+      order.podStatus = 'created';
+
+      // A shipment from an earlier inhouse/custom categorization is now redundant.
+      if (order.awbNumber) {
+        const cancelled = await this.nimbusService.cancelShipment(order.awbNumber);
+        if (!cancelled) {
+          this.logger.warn(`NimbusPost cancel failed for AWB ${order.awbNumber} — cancel manually`);
+        }
+        order.awbNumber = null;
+        order.courierId = null;
+        order.courierName = null;
+        order.nimbusShipmentId = null;
+        order.trackingNumber = null;
+        order.labelUrl = null;
+      }
+    } else if (!order.awbNumber) {
+      await this.createNimbusShipment(order);
+    }
+
+    order.orderType = orderType;
+    return order.save();
+  }
+
+  /** Pull provider-side status (and AWB/tracking once shipped) for a POD order. */
+  async syncPodStatus(orderId: string): Promise<Order> {
+    const order = await this.orderModel.findById(orderId);
+    if (!order) throw new NotFoundException('Order not found');
+    if (!order.podProvider || !order.podOrderId) {
+      throw new BadRequestException('This order has no print-on-demand order to sync');
+    }
+
+    const status = await this.podService.getOrderStatus(order.podProvider, order.podOrderId);
+    if (!status) throw new BadRequestException(`Could not fetch order ${order.podOrderId} from ${order.podProvider}`);
+
+    if (status.status) order.podStatus = status.status;
+    if (status.awb) order.trackingNumber = status.awb;
+    if (status.trackingLink) order.podTrackingLink = status.trackingLink;
+    return order.save();
+  }
+
+  /**
+   * Maps a ustyld order to a provider order. Every item must resolve to a
+   * provider SKU (product.pod.baseSku + variant.podColorCode + size) and carry a
+   * design with a rendered thumbnail — design-less items can't be printed on demand.
+   */
+  private async buildPodOrderInput(order: OrderDocument): Promise<PodOrderInput> {
+    const productIds = [...new Set(order.items.map((i) => i.productId.toString()))];
+    const designIds = order.items.filter((i) => i.designId).map((i) => i.designId!.toString());
+
+    const [products, designs] = await Promise.all([
+      this.productModel.find({ _id: { $in: productIds.map((id) => new Types.ObjectId(id)) } }),
+      this.designModel.find({ _id: { $in: designIds.map((id) => new Types.ObjectId(id)) } }),
+    ]);
+    const productMap = new Map(products.map((p) => [(p as any)._id.toString(), p]));
+    const designMap = new Map(designs.map((d) => [(d as any)._id.toString(), d]));
+
+    const lineItems = order.items.map((item) => {
+      const product = productMap.get(item.productId.toString());
+      if (!product) throw new BadRequestException(`Product ${item.productId} no longer exists`);
+      if (!product.pod?.baseSku || !product.pod?.printTypeId) {
+        throw new BadRequestException(`'${product.name}' has no print-on-demand mapping — set pod.baseSku/printTypeId on the product`);
+      }
+      const variant = product.variants.find(
+        (v) => v.color.toLowerCase() === item.variantColor.toLowerCase(),
+      );
+      if (!variant?.podColorCode) {
+        throw new BadRequestException(`'${product.name}' variant '${item.variantColor}' has no podColorCode — set it on the product`);
+      }
+      const designId = item.designId?.toString();
+      const design = designId ? designMap.get(designId) : null;
+      if (!design?.thumbnailUrl) {
+        throw new BadRequestException(
+          `Order item '${product.name}' (${item.variantColor}/${item.size}) has no design thumbnail — print-on-demand needs a rendered design image`,
+        );
+      }
+
+      return {
+        sku: `${product.pod.baseSku}-${variant.podColorCode}-${item.size}`,
+        quantity: item.quantity,
+        priceRupees: Math.round(item.unitPrice / 100), // ecom stores paise
+        printTypeId: product.pod.printTypeId,
+        designCode: designId!, // stable per design → Qikink reuses it on repeat orders
+        designUrl: design.thumbnailUrl,
+        mockupUrl: design.thumbnailUrl,
+      };
+    });
+
+    const [firstName, ...rest] = order.shippingAddress.name.trim().split(/\s+/);
+    return {
+      orderNumber: (order as any)._id.toString(),
+      totalValueRupees: Math.round(order.total / 100),
+      lineItems,
+      shippingAddress: {
+        firstName,
+        lastName: rest.join(' '),
+        address1: order.shippingAddress.line1,
+        address2: order.shippingAddress.line2 ?? '',
+        phone: order.shippingAddress.phone.replace(/\D/g, '').slice(-10),
+        email: order.customerEmail ?? '',
+        city: order.shippingAddress.city,
+        zip: order.shippingAddress.pincode,
+        province: order.shippingAddress.state,
+        countryCode: 'IN',
+      },
+    };
   }
 
   private computeEstimatedDelivery(): Date {
@@ -312,6 +449,13 @@ export class OrdersService {
       if (!cancelled) {
         this.logger.warn(`NimbusPost cancel failed for AWB ${order.awbNumber} — cancel manually in the dashboard`);
       }
+    }
+
+    // Qikink's API has no cancel endpoint — the POD order must be cancelled in their dashboard.
+    if (order.podOrderId) {
+      this.logger.warn(
+        `Order ${orderId} refunded but has ${order.podProvider} order ${order.podOrderId} — cancel it manually in the provider dashboard`,
+      );
     }
 
     order.paymentStatus = 'refunded';
