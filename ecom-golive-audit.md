@@ -144,6 +144,15 @@ Frontend deployed target: `NEXT_PUBLIC_API_URL=https://api.nexusagents.cloud`.
   allow-origin (env not set on box), frontend domain not resolving. Frontend must be redeployed with
   the rebranded build + inkwear.org DNS + CORS_ORIGINS, then E2E smoke test.
 
+**2026-07-10: UAT phase — see `commonbe/UAT-CHECKLIST.md`** for the live pre-UAT setup, test
+script, and post-UAT launch gates. Final code batch before UAT: Razorpay webhook
+(`POST /ecom/webhooks/razorpay`, HMAC-verified, marks orders paid server-side — browser-close
+safety net), saved-design re-editing (studio `?designId=` + dashboard pencil link, canvas reset
+on fresh entry), POD per-placement pricing (DTG ₹127 / DTF ₹233 per side + GST, back-print
+surcharge at checkout), commission un-hardcoded (reads AdminConfig), payout rates fixed to
+earnings-based (cash 1:1 / discount 1.2x — LIVE DB CONFIG MUST BE UPDATED to 100/120),
+landing auto-populates products + creators, studio mobile pass, branded OTP text.
+
 **REMAINING — ops/user-only tasks (no code left):**
 1. Create real support email (placeholder support@inkwear.org in all 3 policy pages); set
    NEXT_PUBLIC_SITE_URL; fill NIMBUSPOST_* + ADMIN_MOBILE_NUMBERS in prod env; verify

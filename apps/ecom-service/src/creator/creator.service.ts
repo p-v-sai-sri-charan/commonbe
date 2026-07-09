@@ -105,9 +105,12 @@ export class CreatorService {
       throw new BadRequestException('Insufficient pending earnings');
     }
 
+    // Payouts redeem pending EARNINGS (paise). Rates are "paise of value per ₹1 (100 paise)
+    // redeemed": cash 100 = 1:1 real money; discount defaults higher (e.g. 120 = +20% store
+    // credit) to reward keeping value on-platform. Admin tunes both in /admin/config.
     const adminConfig = await this.adminConfigModel.findOne({ key: 'singleton' });
-    const cashRate = adminConfig?.creditCashRatePaise ?? 400;
-    const discountRate = adminConfig?.creditDiscountRatePaise ?? 4000;
+    const cashRate = adminConfig?.creditCashRatePaise ?? 100;
+    const discountRate = adminConfig?.creditDiscountRatePaise ?? 120;
     const ratePerHundred = dto.type === 'cash' ? cashRate : discountRate;
     const valuePaise = Math.floor((dto.creditsUsed / 100) * ratePerHundred);
 

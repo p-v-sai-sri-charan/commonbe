@@ -15,7 +15,7 @@ export class DesignsController {
   @UseGuards(RequireUserGuard)
   @Post()
   create(@Headers('x-user-id') userId: string, @Body() dto: CreateDesignDto) {
-    return this.designsService.create(userId, dto, 25);
+    return this.designsService.create(userId, dto);
   }
 
   @UseGuards(RequireUserGuard)

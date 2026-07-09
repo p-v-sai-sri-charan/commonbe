@@ -49,6 +49,21 @@ export class PodConfigDto {
   /** Provider base SKU without color/size suffix, e.g. "MVnHs". */
   @IsString()
   baseSku: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  frontPrintRupees?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  backPrintRupees?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  backSurchargePaise?: number;
 }
 
 export class ProductImageDto {

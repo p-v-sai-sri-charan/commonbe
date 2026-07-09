@@ -7,6 +7,18 @@ import { MarketplaceService } from './marketplace.service';
 export class MarketplaceController {
   constructor(private readonly marketplaceService: MarketplaceService) {}
 
+  /** Public platform numbers (commission %, signup credits) for marketing pages. */
+  @Get('config')
+  getPublicConfig() {
+    return this.marketplaceService.getPublicConfig();
+  }
+
+  /** Top creators for the landing page. Registered BEFORE 'creators/:slug' — route order matters. */
+  @Get('creators')
+  listTopCreators(@Query('limit') limit?: string) {
+    return this.marketplaceService.listTopCreators(Math.min(Number(limit) || 6, 20));
+  }
+
   @Get('designs')
   listDesigns(
     @Query('page') page?: string,

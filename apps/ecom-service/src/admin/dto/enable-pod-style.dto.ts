@@ -1,4 +1,4 @@
-import { IsBoolean, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class EnablePodStyleDto {
   /** Retail price in PAISE (like Product.basePrice). Must exceed Qikink's cost.
@@ -12,6 +12,23 @@ export class EnablePodStyleDto {
   @IsOptional()
   @IsBoolean()
   showInShop?: boolean;
+
+  /** Qikink print technique: 1 = DTG, 17 = DTF. Defaults to the catalog's value (DTG). */
+  @IsOptional()
+  @IsIn([1, 17])
+  printTypeId?: number;
+
+  /** Qikink front print cost (rupees, ex-GST) from their dashboard; defaults per technique. */
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  frontPrintRupees?: number;
+
+  /** Qikink back print cost (rupees, ex-GST); drives the checkout back-print surcharge. */
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  backPrintRupees?: number;
 
   @IsOptional()
   @IsString()

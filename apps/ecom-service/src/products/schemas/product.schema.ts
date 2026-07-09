@@ -30,6 +30,11 @@ export class PodConfig {
   provider: string;
   printTypeId: number;
   baseSku: string;
+  /** Qikink print cost per placement (rupees, ex-GST) — admin-entered from their dashboard. */
+  frontPrintRupees?: number | null;
+  backPrintRupees?: number | null;
+  /** Customer-facing add-on (paise) applied at checkout when the design has a back print. */
+  backSurchargePaise?: number | null;
 }
 
 export class ProductImage {
@@ -66,7 +71,14 @@ export class Product {
 
   /** Null = product not eligible for print-on-demand fulfillment. */
   @Prop({
-    type: { provider: String, printTypeId: Number, baseSku: String },
+    type: {
+      provider: String,
+      printTypeId: Number,
+      baseSku: String,
+      frontPrintRupees: { type: Number, default: null },
+      backPrintRupees: { type: Number, default: null },
+      backSurchargePaise: { type: Number, default: null },
+    },
     default: null,
   })
   pod: PodConfig | null;

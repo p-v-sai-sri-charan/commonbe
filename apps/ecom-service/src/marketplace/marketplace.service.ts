@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { AdminConfig, AdminConfigDocument } from '../admin/schemas/admin-config.schema';
 import { Design, DesignDocument } from '../designs/schemas/design.schema';
 import { CreatorProfile, CreatorProfileDocument } from '../creator/schemas/creator-profile.schema';
 import { Product, ProductDocument } from '../products/schemas/product.schema';
@@ -17,7 +18,45 @@ export class MarketplaceService {
     @InjectModel(Design.name) private readonly designModel: Model<DesignDocument>,
     @InjectModel(CreatorProfile.name) private readonly creatorModel: Model<CreatorProfileDocument>,
     @InjectModel(Product.name) private readonly productModel: Model<ProductDocument>,
+    @InjectModel(AdminConfig.name) private readonly adminConfigModel: Model<AdminConfigDocument>,
   ) {}
+
+  /** Public, non-sensitive platform numbers for marketing pages (commission %, signup credits). */
+  async getPublicConfig(): Promise<{
+    defaultCommissionRate: number;
+    signupAiCredits: number;
+    designPurchaseBonusCredits: number;
+    creditCashRatePaise: number;
+    creditDiscountRatePaise: number;
+  }> {
+    const config = await this.adminConfigModel.findOne({ key: 'singleton' });
+    return {
+      defaultCommissionRate: config?.defaultCommissionRate ?? 25,
+      signupAiCredits: config?.signupAiCredits ?? 20,
+      designPurchaseBonusCredits: config?.designPurchaseBonusCredits ?? 20,
+      creditCashRatePaise: config?.creditCashRatePaise ?? 100,
+      creditDiscountRatePaise: config?.creditDiscountRatePaise ?? 120,
+    };
+  }
+
+  /** Top creators for the landing page — public profile fields only. */
+  async listTopCreators(limit = 6): Promise<
+    Array<{ slug: string; displayName: string; bio: string | null; profilePictureUrl: string | null; totalSales: number; isVerified: boolean }>
+  > {
+    const creators = await this.creatorModel
+      .find()
+      .sort({ totalSales: -1, createdAt: 1 })
+      .limit(limit)
+      .select('slug displayName bio profilePictureUrl totalSales isVerified');
+    return creators.map((c) => ({
+      slug: c.slug,
+      displayName: c.displayName,
+      bio: c.bio ?? null,
+      profilePictureUrl: c.profilePictureUrl ?? null,
+      totalSales: c.totalSales,
+      isVerified: c.isVerified,
+    }));
+  }
 
   async listDesigns(options: {
     page: number;

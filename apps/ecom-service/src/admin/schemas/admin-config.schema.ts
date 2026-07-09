@@ -23,12 +23,12 @@ export class AdminConfig {
   @Prop({ type: Number, default: 1, min: 1 })
   aiCreditCostPerGeneration: number;
 
-  /** Paise per 100 credits redeemed as cash (default: 100 credits = ₹4 = 400 paise) */
-  @Prop({ type: Number, default: 400, min: 0 })
+  /** Paise of cash paid per ₹1 (100 paise) of creator earnings redeemed. 100 = 1:1. */
+  @Prop({ type: Number, default: 100, min: 0 })
   creditCashRatePaise: number;
 
-  /** Paise per 100 credits redeemed as store discount (default: 100 credits = ₹40 = 4000 paise) */
-  @Prop({ type: Number, default: 4000, min: 0 })
+  /** Paise of store credit per ₹1 of earnings redeemed. 120 = +20% bonus for staying on-platform. */
+  @Prop({ type: Number, default: 120, min: 0 })
   creditDiscountRatePaise: number;
 }
 

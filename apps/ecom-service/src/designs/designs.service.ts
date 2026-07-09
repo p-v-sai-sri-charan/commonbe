@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { AdminConfig, AdminConfigDocument } from '../admin/schemas/admin-config.schema';
 import { CreateDesignDto } from './dto/create-design.dto';
 import { PublishDesignDto } from './dto/publish-design.dto';
 import { UpdateDesignDto } from './dto/update-design.dto';
@@ -8,14 +9,19 @@ import { Design, DesignDocument } from './schemas/design.schema';
 
 @Injectable()
 export class DesignsService {
-  constructor(@InjectModel(Design.name) private readonly designModel: Model<DesignDocument>) {}
+  constructor(
+    @InjectModel(Design.name) private readonly designModel: Model<DesignDocument>,
+    @InjectModel(AdminConfig.name) private readonly adminConfigModel: Model<AdminConfigDocument>,
+  ) {}
 
-  async create(userId: string, dto: CreateDesignDto, defaultCommissionRate: number): Promise<Design> {
+  async create(userId: string, dto: CreateDesignDto): Promise<Design> {
+    // Commission comes from platform config (admin-tunable), NOT a hardcoded 25.
+    const config = await this.adminConfigModel.findOne({ key: 'singleton' });
     return this.designModel.create({
       ...dto,
       userId,
       status: 'draft',
-      commissionRate: defaultCommissionRate,
+      commissionRate: config?.defaultCommissionRate ?? 25,
     });
   }
 

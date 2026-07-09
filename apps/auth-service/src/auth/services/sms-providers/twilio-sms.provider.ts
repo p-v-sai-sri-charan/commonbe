@@ -26,10 +26,10 @@ export class TwilioSmsProvider implements SmsProvider {
     await client.messages.create({
       to: mobileNumber,
       from: fromNumber,
-      body: `Your OTP is ${otp}`,
+      body: `${otp} is your OTP to log in to inkwear. Valid for 5 minutes — never share it with anyone.`,
     });
 
-    this.logger.log(`Sent OTP to ${mobileNumber} via Twilio ${otp}`);
+    this.logger.log(`Sent OTP to ${mobileNumber} via Twilio`);
   }
 }
 

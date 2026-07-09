@@ -40,6 +40,10 @@ export class EcomController {
       const headers: Record<string, string> = {
         'content-type': (req.headers['content-type'] as string) ?? 'application/json',
       };
+      // Razorpay webhook signature must survive the proxy hop
+      if (req.headers['x-razorpay-signature']) {
+        headers['x-razorpay-signature'] = req.headers['x-razorpay-signature'] as string;
+      }
       if (req.user) {
         headers['x-user-id'] = req.user.sub;
         headers['x-user-roles'] = (req.user.roles ?? []).join(',');

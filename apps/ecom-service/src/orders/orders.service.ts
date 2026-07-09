@@ -79,9 +79,17 @@ export class OrdersService {
 
       const design = cartItem.designId ? designMap.get(cartItem.designId.toString()) : null;
       const designPrice = design?.price ?? 0;
-      const unitPrice = product.basePrice + designPrice;
+      // Back prints cost extra at Qikink — pass the product's surcharge to the customer.
+      const hasBackPrint = Boolean(
+        design && (design.backThumbnailUrl || design.canvas?.layers?.some((l) => l.side === 'back')),
+      );
+      const backSurcharge = hasBackPrint ? (product.pod?.backSurchargePaise ?? 0) : 0;
+      const unitPrice = product.basePrice + designPrice + backSurcharge;
       const commissionRate = design?.commissionRate ?? 0;
-      const commissionAmount = design ? Math.round((unitPrice * commissionRate) / 100) : 0;
+      // Creator commission excludes the surcharge — it's a printing-cost passthrough.
+      const commissionAmount = design
+        ? Math.round(((product.basePrice + designPrice) * commissionRate) / 100)
+        : 0;
 
       return {
         productId: cartItem.productId,
@@ -164,6 +172,66 @@ export class OrdersService {
     );
 
     return order;
+  }
+
+  /**
+   * Razorpay webhook — the server-side safety net for payments where the buyer's
+   * browser never completed verify-payment (closed tab, network drop). Signature
+   * is HMAC-SHA256 of the payload with RAZORPAY_WEBHOOK_SECRET.
+   *
+   * Note: the gateway re-serializes JSON, so we verify against JSON.stringify of
+   * the parsed body. Razorpay sends compact JSON and V8 preserves key order, so
+   * the bytes match; if UAT shows signature mismatches, verify at the gateway
+   * with the raw body instead.
+   */
+  async handleRazorpayWebhook(
+    body: Record<string, unknown>,
+    signature?: string,
+  ): Promise<{ status: string }> {
+    const secret = this.configService.get<string>('RAZORPAY_WEBHOOK_SECRET', '');
+    if (!secret) {
+      this.logger.error('RAZORPAY_WEBHOOK_SECRET is not set — webhook ignored. Configure it and the Razorpay dashboard.');
+      return { status: 'unconfigured' };
+    }
+    if (!signature) throw new BadRequestException('Missing x-razorpay-signature');
+
+    const expected = createHmac('sha256', secret).update(JSON.stringify(body)).digest('hex');
+    if (expected !== signature) {
+      this.logger.warn('Razorpay webhook signature mismatch — payload rejected');
+      throw new BadRequestException('Invalid webhook signature');
+    }
+
+    const event = body.event as string;
+    const payment = (body as any)?.payload?.payment?.entity as
+      | { id?: string; order_id?: string }
+      | undefined;
+    if (!payment?.order_id) return { status: 'ignored' };
+
+    const order = await this.orderModel.findOne({ paymentOrderId: payment.order_id });
+    if (!order) {
+      this.logger.warn(`Razorpay webhook for unknown order ${payment.order_id} (${event})`);
+      return { status: 'unknown-order' };
+    }
+
+    if (event === 'payment.captured') {
+      if (order.paymentStatus === 'paid') return { status: 'already-paid' }; // idempotent
+      order.paymentStatus = 'paid';
+      order.paymentId = payment.id ?? null;
+      await order.save();
+      this.logger.log(`Order ${(order as any)._id} marked paid via webhook (payment ${payment.id})`);
+      this.postPaymentActions(order, order.userId).catch((err) =>
+        this.logger.error(`Webhook post-payment actions failed for ${(order as any)._id}: ${err.message}`),
+      );
+      return { status: 'paid' };
+    }
+
+    if (event === 'payment.failed' && order.paymentStatus === 'pending') {
+      order.paymentStatus = 'failed';
+      await order.save();
+      return { status: 'failed-recorded' };
+    }
+
+    return { status: 'ignored' };
   }
 
   private async postPaymentActions(order: OrderDocument, buyerUserId: string): Promise<void> {
