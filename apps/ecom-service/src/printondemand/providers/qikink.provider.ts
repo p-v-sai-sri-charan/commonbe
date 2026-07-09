@@ -70,7 +70,7 @@ export class QikinkProvider implements PodProvider {
     const body = {
       order_number: input.orderNumber,
       qikink_shipping: '1', // Qikink handles shipping for POD orders
-      gateway: 'Prepaid', // ustyld orders are Razorpay-paid before categorization
+      gateway: 'Prepaid', // inkwear orders are Razorpay-paid before categorization
       total_order_value: input.totalValueRupees.toString(),
       line_items: input.lineItems.map((item) => ({
         search_from_my_products: 0,
@@ -83,10 +83,23 @@ export class QikinkProvider implements PodProvider {
             design_code: item.designCode,
             width_inches: '',
             height_inches: '',
-            placement_sku: 'fr', // studio designs are front placements
+            placement_sku: 'fr',
             design_link: item.designUrl,
             mockup_link: item.mockupUrl,
           },
+          // Back print — Qikink 'bk' placement; separate design_code so both faces persist
+          ...(item.backDesignUrl
+            ? [
+                {
+                  design_code: `${item.designCode}-bk`,
+                  width_inches: '',
+                  height_inches: '',
+                  placement_sku: 'bk',
+                  design_link: item.backDesignUrl,
+                  mockup_link: item.backMockupUrl ?? item.backDesignUrl,
+                },
+              ]
+            : []),
         ],
       })),
       shipping_address: {

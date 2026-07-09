@@ -9,6 +9,8 @@ export class CanvasLayer {
   id: string;
   type: 'image';
   src: string;
+  /** Which garment face the layer prints on. Missing = 'front' (pre-back-print designs). */
+  side?: 'front' | 'back';
   x: number;
   y: number;
   width: number;
@@ -39,6 +41,7 @@ export class Design {
           id: String,
           type: String,
           src: String,
+          side: { type: String, enum: ['front', 'back'], default: 'front' },
           x: Number,
           y: Number,
           width: Number,
@@ -54,6 +57,10 @@ export class Design {
 
   @Prop({ type: String, default: null })
   thumbnailUrl: string | null;
+
+  /** Rendered back-side print, when the design uses the back face (Qikink 'bk' placement). */
+  @Prop({ type: String, default: null })
+  backThumbnailUrl: string | null;
 
   @Prop({ type: Boolean, default: false })
   aiGenerated: boolean;

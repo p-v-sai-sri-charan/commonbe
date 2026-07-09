@@ -123,8 +123,8 @@ export class NimbusService {
     if (!token) return null;
 
     const courierId = this.config.get<string>('NIMBUSPOST_COURIER_ID', '110');
-    const wName = this.config.get<string>('NIMBUSPOST_WAREHOUSE_NAME', 'ustyld');
-    const wPerson = this.config.get<string>('NIMBUSPOST_WAREHOUSE_PERSON', 'ustyld');
+    const wName = this.config.get<string>('NIMBUSPOST_WAREHOUSE_NAME', 'inkwear');
+    const wPerson = this.config.get<string>('NIMBUSPOST_WAREHOUSE_PERSON', 'inkwear');
     const wAddress = this.config.get<string>('NIMBUSPOST_WAREHOUSE_ADDRESS', '');
     const wAddress2 = this.config.get<string>('NIMBUSPOST_WAREHOUSE_ADDRESS2', '');
     const wCity = this.config.get<string>('NIMBUSPOST_WAREHOUSE_CITY', '');
@@ -156,7 +156,7 @@ export class NimbusService {
       request_auto_pickup: 'Yes',
       invoice: [
         {
-          invoice_number: `USTD-${params.orderId.slice(-8).toUpperCase()}`,
+          invoice_number: `INKW-${params.orderId.slice(-8).toUpperCase()}`,
           invoice_date: invoiceDate,
           invoice_value: params.invoiceValue.toString(),
         },

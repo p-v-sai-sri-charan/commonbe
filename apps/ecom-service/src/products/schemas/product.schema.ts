@@ -83,6 +83,14 @@ export class Product {
   @Prop({ type: String, default: 'tshirt' })
   garmentType: string;
 
+  /** False = studio-only blank canvas; hidden from the shop listing. */
+  @Prop({ type: Boolean, default: true })
+  showInShop: boolean;
+
+  /** False = ready-made product (mockup images, no studio editing — buy as-is). */
+  @Prop({ type: Boolean, default: true })
+  customizable: boolean;
+
   @Prop({ type: String, enum: ['full', 'limited'], default: 'full' })
   designAreaType: DesignAreaType;
 

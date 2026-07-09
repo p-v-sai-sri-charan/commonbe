@@ -1,6 +1,6 @@
 ---
 name: ecom-golive-audit
-description: "ustyld (ecom) go-live audit 2026-07-07 — Day-1 blockers fixed, remaining launch work list"
+description: "inkwear (ex-ustyld) ecom go-live audit — Day-1 blockers fixed, rebrand 2026-07-09, remaining launch work list"
 metadata: 
   node_type: memory
   type: project
@@ -132,8 +132,20 @@ Frontend deployed target: `NEXT_PUBLIC_API_URL=https://api.nexusagents.cloud`.
   set model3dUrl at enable time or via product PATCH.
 - Builds green: ecom-service + frontend (24 routes incl. /admin/pod-catalog).
 
+**Fixed 2026-07-09 (rebrand session — brand is now "inkwear", domain inkwear.org):**
+- "ustyld" hit a trademark conflict; user owns **inkwear.org** (note: inkwear.com/.in are taken by
+  third parties — user was advised to run tmrsearch.ipindia.gov.in Class 25/35 before launch).
+- Full rebrand pass: all 39 frontend refs (metadata/OG, landing, policy pages, checkout Razorpay
+  display name, robots/sitemap defaults → https://inkwear.org, support@inkwear.org), backend
+  (Nimbus invoice prefix USTD- → INKW-, warehouse defaults), .env.golive (CORS_ORIGINS,
+  SMTP_FROM, NEXT_PUBLIC_SITE_URL → inkwear.org). Builds green.
+- **Deploy check 2026-07-08 (post user redeploy): backend at api.nexusagents.cloud runs the newest
+  code** (products 200 logged-out, pod-catalog route present + guarded). Still failing: CORS has no
+  allow-origin (env not set on box), frontend domain not resolving. Frontend must be redeployed with
+  the rebranded build + inkwear.org DNS + CORS_ORIGINS, then E2E smoke test.
+
 **REMAINING — ops/user-only tasks (no code left):**
-1. Create real support email (placeholder support@ustyld.com in all 3 policy pages); set
+1. Create real support email (placeholder support@inkwear.org in all 3 policy pages); set
    NEXT_PUBLIC_SITE_URL; fill NIMBUSPOST_* + ADMIN_MOBILE_NUMBERS in prod env; verify
    NODE_ENV=production on deployed gateway (OTP echoes in responses otherwise!); RabbitMQ up.
 2. **E2E smoke test against a live DB (never done):** OTP login → admin role grant → product create →

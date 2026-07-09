@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsIn,
   IsBoolean,
   IsMongoId,
   IsNumber,
@@ -14,6 +15,10 @@ import {
 export class CanvasLayerDto {
   @IsString()
   id: string;
+
+  @IsOptional()
+  @IsIn(['front', 'back'])
+  side?: 'front' | 'back';
 
   @IsString()
   type: 'image';
@@ -64,6 +69,10 @@ export class CreateDesignDto {
   @IsOptional()
   @IsString()
   thumbnailUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  backThumbnailUrl?: string;
 
   @IsOptional()
   @IsBoolean()

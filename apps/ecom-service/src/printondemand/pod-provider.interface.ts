@@ -18,6 +18,9 @@ export interface PodLineItem {
   designCode: string;
   designUrl: string;
   mockupUrl: string;
+  /** Back-face print (Qikink placement 'bk'); omitted when the design is front-only. */
+  backDesignUrl?: string;
+  backMockupUrl?: string;
 }
 
 export interface PodShippingAddress {
@@ -34,7 +37,7 @@ export interface PodShippingAddress {
 }
 
 export interface PodOrderInput {
-  /** Must be unique per provider account — we use the ustyld order _id. */
+  /** Must be unique per provider account — we use the inkwear order _id. */
   orderNumber: string;
   totalValueRupees: number;
   lineItems: PodLineItem[];

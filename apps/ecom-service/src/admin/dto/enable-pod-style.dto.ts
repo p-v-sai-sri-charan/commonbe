@@ -1,10 +1,17 @@
-import { IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsBoolean, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class EnablePodStyleDto {
-  /** Retail price in PAISE (like Product.basePrice). Must exceed Qikink's cost. */
+  /** Retail price in PAISE (like Product.basePrice). Must exceed Qikink's cost.
+   *  Omitted → defaults to Qikink cost + 60% margin. */
+  @IsOptional()
   @IsNumber()
   @Min(1)
-  basePrice: number;
+  basePrice?: number;
+
+  /** False = studio-only blank canvas, hidden from the shop listing. */
+  @IsOptional()
+  @IsBoolean()
+  showInShop?: boolean;
 
   @IsOptional()
   @IsString()

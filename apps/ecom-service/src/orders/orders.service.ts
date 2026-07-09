@@ -312,7 +312,7 @@ export class OrdersService {
   }
 
   /**
-   * Maps a ustyld order to a provider order. Every item must resolve to a
+   * Maps a inkwear order to a provider order. Every item must resolve to a
    * provider SKU (product.pod.baseSku + variant.podColorCode + size) and carry a
    * design with a rendered thumbnail — design-less items can't be printed on demand.
    */
@@ -355,6 +355,10 @@ export class OrdersService {
         designCode: designId!, // stable per design → Qikink reuses it on repeat orders
         designUrl: design.thumbnailUrl,
         mockupUrl: design.thumbnailUrl,
+        ...(design.backThumbnailUrl && {
+          backDesignUrl: design.backThumbnailUrl,
+          backMockupUrl: design.backThumbnailUrl,
+        }),
       };
     });
 

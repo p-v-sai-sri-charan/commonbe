@@ -44,25 +44,26 @@ export class PodCatalogService {
 
   async enable(
     styleKey: string,
-    opts: { basePrice: number; description?: string; model3dUrl?: string },
+    opts: { basePrice?: number; description?: string; model3dUrl?: string; showInShop?: boolean },
   ): Promise<Product> {
     const style = QIKINK_APPAREL_CATALOG.find((s) => s.styleKey === styleKey);
     if (!style) throw new NotFoundException(`Unknown catalog style '${styleKey}'`);
-    if (!opts.basePrice || opts.basePrice <= 0) {
-      throw new BadRequestException('basePrice (retail, in paise) is required');
-    }
+
+    // Default retail = Qikink cost + 60% margin, rounded up to a whole rupee.
+    const basePrice = opts.basePrice ?? Math.ceil(style.qikinkBasePriceRupees * 1.6) * 100;
     // Selling below cost is almost certainly a paise/rupee mix-up.
-    if (opts.basePrice < style.qikinkBasePriceRupees * 100) {
+    if (basePrice < style.qikinkBasePriceRupees * 100) {
       throw new BadRequestException(
-        `basePrice ₹${(opts.basePrice / 100).toFixed(0)} is below Qikink's cost ₹${style.qikinkBasePriceRupees} — did you enter rupees instead of paise?`,
+        `basePrice ₹${(basePrice / 100).toFixed(0)} is below Qikink's cost ₹${style.qikinkBasePriceRupees} — did you enter rupees instead of paise?`,
       );
     }
 
     const existing = await this.productModel.findOne({ styleKey });
     if (existing) {
       existing.isActive = true;
-      existing.basePrice = opts.basePrice;
+      existing.basePrice = basePrice;
       if (opts.model3dUrl !== undefined) existing.model3dUrl = opts.model3dUrl || null;
+      if (opts.showInShop !== undefined) existing.showInShop = opts.showInShop;
       return existing.save();
     }
 
@@ -73,7 +74,8 @@ export class PodCatalogService {
         `${style.displayName} — printed on demand. Design yours in the studio.`,
       category: style.garmentType,
       garmentType: style.garmentType,
-      basePrice: opts.basePrice,
+      basePrice,
+      showInShop: opts.showInShop ?? true,
       variants: style.colors.map((color) => ({
         color: color.name,
         hexCode: color.hex,

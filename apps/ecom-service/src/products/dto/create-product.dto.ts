@@ -137,4 +137,14 @@ export class CreateProductDto {
   @IsOptional()
   @IsString()
   garmentType?: string;
+
+  /** False = studio-only blank canvas; hidden from the shop listing. */
+  @IsOptional()
+  @IsBoolean()
+  showInShop?: boolean;
+
+  /** False = ready-made product (mockup images, no studio editing). */
+  @IsOptional()
+  @IsBoolean()
+  customizable?: boolean;
 }
