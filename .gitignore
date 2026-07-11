@@ -7,3 +7,4 @@ dist
 # .env.example
 *.env.local
 .env.golive
+.env.sample

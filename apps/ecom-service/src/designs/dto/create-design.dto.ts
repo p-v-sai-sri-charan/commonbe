@@ -20,11 +20,29 @@ export class CanvasLayerDto {
   @IsIn(['front', 'back'])
   side?: 'front' | 'back';
 
-  @IsString()
-  type: 'image';
+  @IsIn(['image', 'text'])
+  type: 'image' | 'text';
 
+  /** Image URL — omitted/empty for text layers. */
+  @IsOptional()
   @IsString()
-  src: string;
+  src?: string;
+
+  @IsOptional()
+  @IsString()
+  text?: string;
+
+  @IsOptional()
+  @IsString()
+  fontFamily?: string;
+
+  @IsOptional()
+  @IsString()
+  color?: string;
+
+  @IsOptional()
+  @IsString()
+  fontWeight?: string;
 
   @IsNumber()
   x: number;

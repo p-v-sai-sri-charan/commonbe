@@ -7,8 +7,14 @@ export type DesignStatus = 'draft' | 'published' | 'rejected';
 
 export class CanvasLayer {
   id: string;
-  type: 'image';
-  src: string;
+  type: 'image' | 'text';
+  /** Image URL — empty for text layers. */
+  src?: string;
+  /** Text-layer fields (type === 'text'). Font size derives from the layer box height. */
+  text?: string;
+  fontFamily?: string;
+  color?: string;
+  fontWeight?: string;
   /** Which garment face the layer prints on. Missing = 'front' (pre-back-print designs). */
   side?: 'front' | 'back';
   x: number;
@@ -43,6 +49,10 @@ export class Design {
           // whole layer object is (mis)declared as a String path and every save 500s.
           type: { type: String },
           src: String,
+          text: String,
+          fontFamily: String,
+          color: String,
+          fontWeight: String,
           side: { type: String, enum: ['front', 'back'], default: 'front' },
           x: Number,
           y: Number,
