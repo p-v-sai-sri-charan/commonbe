@@ -118,9 +118,15 @@ export class OrdersService {
       paymentStatus: 'pending',
     });
 
+    // Mock payment flow is a dev convenience ONLY — in production, missing keys must
+    // hard-fail, otherwise orders would "complete" without any payment.
+    const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
     let razorpayOrderId = `mock_${(order as any)._id}`;
     const keyId = this.configService.get<string>('RAZORPAY_KEY_ID');
     const keySecret = this.configService.get<string>('RAZORPAY_KEY_SECRET');
+    if (isProduction && (!keyId || !keySecret)) {
+      throw new BadRequestException('Payments are not configured — try again later');
+    }
     if (keyId && keySecret) {
       try {
         const basicAuth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
@@ -129,8 +135,15 @@ export class OrdersService {
           headers: { Authorization: `Basic ${basicAuth}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ amount: total, currency: 'INR', receipt: (order as any)._id.toString() }),
         });
-        const rzpData = (await rzpRes.json()) as { id?: string };
-        if (rzpData.id) razorpayOrderId = rzpData.id;
+        const rzpData = (await rzpRes.json()) as { id?: string; error?: { description?: string } };
+        if (rzpData.id) {
+          razorpayOrderId = rzpData.id;
+        } else {
+          // e.g. 401 invalid keys — surface it instead of silently falling back to mock
+          this.logger.error(
+            `Razorpay order creation rejected (HTTP ${rzpRes.status}): ${rzpData.error?.description ?? JSON.stringify(rzpData)}`,
+          );
+        }
       } catch (err: any) {
         this.logger.error(`Razorpay order creation failed: ${err.message}`);
       }
@@ -153,6 +166,10 @@ export class OrdersService {
     if (order.paymentStatus === 'paid') throw new BadRequestException('Order already paid');
 
     const isMockOrder = order.paymentOrderId?.startsWith('mock_');
+    if (isMockOrder && this.configService.get<string>('NODE_ENV') === 'production') {
+      // A mock order must never be payable in production — no free merchandise.
+      throw new BadRequestException('This order was created without a payment gateway — contact support');
+    }
     const keySecret = this.configService.get<string>('RAZORPAY_KEY_SECRET', '');
     if (keySecret && !isMockOrder) {
       const body = `${dto.razorpayOrderId}|${dto.razorpayPaymentId}`;
