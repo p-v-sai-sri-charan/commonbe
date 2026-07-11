@@ -39,7 +39,9 @@ export class Design {
       layers: [
         {
           id: String,
-          type: String,
+          // 'type' is a reserved key in Mongoose subdocs — without this nesting the
+          // whole layer object is (mis)declared as a String path and every save 500s.
+          type: { type: String },
           src: String,
           side: { type: String, enum: ['front', 'back'], default: 'front' },
           x: Number,
