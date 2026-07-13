@@ -1,4 +1,4 @@
-import { IsEmail, IsObject, IsOptional, IsString, IsUrl } from 'class-validator';
+import { IsDateString, IsEmail, IsIn, IsObject, IsOptional, IsString, IsUrl } from 'class-validator';
 
 export class CreateProfileDto {
   @IsOptional()
@@ -16,6 +16,15 @@ export class CreateProfileDto {
   @IsOptional()
   @IsUrl()
   avatarUrl?: string;
+
+  /** ISO date (YYYY-MM-DD). */
+  @IsOptional()
+  @IsDateString()
+  dob?: string;
+
+  @IsOptional()
+  @IsIn(['male', 'female', 'other'])
+  gender?: string;
 
   @IsOptional()
   @IsObject()

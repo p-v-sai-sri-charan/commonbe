@@ -21,6 +21,13 @@ export class UserProfile {
   @Prop({ type: String })
   avatarUrl?: string;
 
+  /** ISO date (YYYY-MM-DD). */
+  @Prop({ type: String })
+  dob?: string;
+
+  @Prop({ type: String, enum: ['male', 'female', 'other'], required: false })
+  gender?: string;
+
   @Prop({ type: Object, default: {} })
   preferences: Record<string, unknown>;
 
