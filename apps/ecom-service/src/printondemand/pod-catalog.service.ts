@@ -107,7 +107,9 @@ export class PodCatalogService {
       category: style.garmentType,
       garmentType: style.garmentType,
       basePrice,
-      showInShop: opts.showInShop ?? true,
+      // Catalog garments are STUDIO CANVASES by default — the shop is for
+      // admin-curated finished products; list explicitly via showInShop.
+      showInShop: opts.showInShop ?? false,
       variants: style.colors.map((color) => ({
         color: color.name,
         hexCode: color.hex,
