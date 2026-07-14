@@ -36,7 +36,10 @@ async function bootstrap() {
     transport: Transport.RMQ,
     options: {
       urls: [rabbitmqUrl],
-      queue: 'ecom_events_queue',
+      // Must match auth-service's ECOM_EVENTS_QUEUE — RMQ queues are competing-
+      // consumer, so this is a dedicated queue auth-service publishes to
+      // alongside auth_events_queue (notification-service's queue).
+      queue: configService.get<string>('ECOM_EVENTS_QUEUE', 'ecom_events_queue'),
       queueOptions: { durable: true },
       noAck: false,
     },

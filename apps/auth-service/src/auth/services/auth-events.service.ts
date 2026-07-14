@@ -19,11 +19,16 @@ export interface AuthEventUser {
 export class AuthEventsService {
   private readonly logger = new Logger(AuthEventsService.name);
 
-  constructor(@Inject('EVENTS_SERVICE') private readonly client: ClientProxy) {}
+  constructor(
+    @Inject('EVENTS_SERVICE') private readonly client: ClientProxy,
+    // RMQ queues are competing-consumer, not fanout — ecom-service's signup-
+    // credit grant needs its own delivery of user.created, hence a second client.
+    @Inject('ECOM_EVENTS_SERVICE') private readonly ecomClient: ClientProxy,
+  ) {}
 
-  private emit(pattern: string, payload: Record<string, unknown>): void {
+  private emit(client: ClientProxy, pattern: string, payload: Record<string, unknown>): void {
     try {
-      this.client.emit(pattern, payload).subscribe({
+      client.emit(pattern, payload).subscribe({
         error: (err) => this.logger.warn(`Failed to publish "${pattern}" event: ${err?.message ?? err}`),
       });
     } catch (err) {
@@ -32,10 +37,12 @@ export class AuthEventsService {
   }
 
   userCreated(user: AuthEventUser, via: 'mobile' | 'google'): void {
-    this.emit('user.created', { ...user, via, occurredAt: new Date().toISOString() });
+    const payload = { ...user, via, occurredAt: new Date().toISOString() };
+    this.emit(this.client, 'user.created', payload);
+    this.emit(this.ecomClient, 'user.created', payload);
   }
 
   userLogin(user: AuthEventUser, via: 'mobile' | 'google'): void {
-    this.emit('user.login', { ...user, via, occurredAt: new Date().toISOString() });
+    this.emit(this.client, 'user.login', { ...user, via, occurredAt: new Date().toISOString() });
   }
 }

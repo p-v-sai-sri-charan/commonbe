@@ -34,9 +34,16 @@ import { TwilioSmsProvider } from './services/sms-providers/twilio-sms.provider'
         signOptions: { expiresIn: configService.get<string>('JWT_EXPIRES_IN', '15m') },
       }),
     }),
-    // Producer-only RabbitMQ client used to publish user.created / user.login
+    // Producer-only RabbitMQ clients used to publish user.created / user.login
     // events. auth-service never consumes messages, so it stays a plain
     // HTTP app (no hybrid microservice needed) — see AuthEventsService.
+    //
+    // RMQ's NestJS transport delivers each queue to ONE consumer (competing
+    // consumers, not fanout) — so with two independent subscribers
+    // (notification-service on auth_events_queue, ecom-service's signup-credit
+    // grant on ecom_events_queue) the event must be published to BOTH queues,
+    // not just one. Forgetting this queue means ecom-service never sees
+    // user.created — which is exactly why signup AI credits stopped granting.
     ClientsModule.registerAsync([
       {
         name: 'EVENTS_SERVICE',
@@ -47,6 +54,19 @@ import { TwilioSmsProvider } from './services/sms-providers/twilio-sms.provider'
           options: {
             urls: [configService.get<string>('RABBITMQ_URL', 'amqp://guest:guest@localhost:5672')],
             queue: configService.get<string>('RABBITMQ_EVENTS_QUEUE', 'auth_events_queue'),
+            queueOptions: { durable: true },
+          },
+        }),
+      },
+      {
+        name: 'ECOM_EVENTS_SERVICE',
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: (configService: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [configService.get<string>('RABBITMQ_URL', 'amqp://guest:guest@localhost:5672')],
+            queue: configService.get<string>('ECOM_EVENTS_QUEUE', 'ecom_events_queue'),
             queueOptions: { durable: true },
           },
         }),
