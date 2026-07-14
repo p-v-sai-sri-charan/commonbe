@@ -5,6 +5,7 @@ import { AdminModule } from './admin/admin.module';
 import { AiCreditsModule } from './ai-credits/ai-credits.module';
 import { AiGenerationModule } from './ai-generation/ai-generation.module';
 import { CartModule } from './cart/cart.module';
+import { CategoriesModule } from './categories/categories.module';
 import { CreatorModule } from './creator/creator.module';
 import { DesignsModule } from './designs/designs.module';
 import { MarketplaceModule } from './marketplace/marketplace.module';
@@ -26,6 +27,7 @@ import { EventsModule } from './events/events.module';
       }),
     }),
     ProductsModule,
+    CategoriesModule,
     DesignsModule,
     MarketplaceModule,
     CreatorModule,

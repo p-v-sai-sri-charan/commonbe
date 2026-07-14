@@ -82,7 +82,8 @@ Same shape as the SMS providers: `payments/providers/payment-provider.interface.
 T-shirt e-commerce service at port 3006, database `ecom_db`. Gateway proxies all `/ecom/*` wildcard (same pattern as epidiet).
 
 **Modules:**
-- `products` — catalog with variants (`color`, `hexCode`, sizes/stock). `designAreaType`: `'full'` (whole shirt) or `'limited'` (bounding box in `designArea: { x, y, width, height }` as percentages). Admin-managed.
+- `products` — catalog with variants (`color`, `hexCode`, `podColorCode`, sizes/stock). `designAreaType`: `'full'` (whole shirt) or `'limited'` (bounding box in `designArea: { x, y, width, height }` as percentages). Flags: `showInShop` (false = studio-only blank canvas), `customizable` (false = ready-made mockup product, not editable in studio). Admin-managed.
+- `categories` — admin-managed `{ name, slug }` list (e.g. T-Shirt, Hoodie, Jewelry, Jeans) that populates the Category dropdown in `/admin/products`' create form. `GET /ecom/categories` is public; create/delete/`seed-qikink` (bulk-adds Qikink's distinct garmentTypes) are `AdminGuard`-only. Distinct from `Product.garmentType` (drives POD/3D behavior) — a category is just the shop-facing label stored in `Product.category`, no FK.
 - `designs` — user canvas saved as `layers[]`: `{ id, type, src, x, y, width, height, rotation, zIndex }`. CRUD + publish to marketplace.
 - `marketplace` — published designs browsable by anyone; includes creator commission metadata.
 - `creator` — creator profile, payout requests. BYOK OpenAI key stored AES-256-CBC encrypted (`BYOK_ENCRYPTION_KEY` env). Endpoint: `POST /ecom/creator/byok`.
