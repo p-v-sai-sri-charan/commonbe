@@ -74,6 +74,10 @@ export class Design {
   @Prop({ type: String, default: null })
   backThumbnailUrl: string | null;
 
+  /** Shirt-colored composite (front, no selection chrome) — UI display only, never sent to Qikink. */
+  @Prop({ type: String, default: null })
+  previewUrl: string | null;
+
   @Prop({ type: Boolean, default: false })
   aiGenerated: boolean;
 
